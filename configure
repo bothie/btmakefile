@@ -215,7 +215,7 @@ test4ostype () {
 		cat <<EOF
 failed!
 
-Oops, »uname -s« returned an empty string.
+Oops, Â»uname -sÂ« returned an empty string.
 
 If you know a *secure* way to identify your platform, report it.
 That will be the first step for supporting your platform.
@@ -699,7 +699,7 @@ make BTMAKEPATH=. --always-make -f btmakefile.Makefile clean
 make BTMAKEPATH=. --always-make -f btmakefile.Makefile all
 
 # Wenn tiefe Suche nach brauchbaren gcc-Targets, JETZT auf find warten, und 
-# danach prüfen, ob die Zusatztools alle unter den entsprechenden Präfig 
+# danach prÃ¼fen, ob die Zusatztools alle unter den entsprechenden PrÃ¤fig 
 # vorhanden sind, und ob sich alles im Pfad befindet.
 #
 #Ansatz:

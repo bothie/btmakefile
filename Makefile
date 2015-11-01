@@ -16,7 +16,7 @@ $(ALL): error-message
 install: print-install-note
 
 print-install-note:
-	@echo "Call »./install --help« for help on installing"
+	@echo "Call Â»./install --helpÂ« for help on installing"
 
 my-clean:
 	rm -f configure.* *.d *.o test4sint_overflow.{c,elf} Makefile.{stderr,Include,System} configure-prev version.*
