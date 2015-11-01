@@ -126,7 +126,7 @@ s#@version@#$version#" < btmakefile.in > btmakefile
 	call_install $SET_USR $SET_GRP -m 644 Makefile.VersionControl "$extraprefix/$btmakefilepath"
 	call_install $SET_USR $SET_GRP -m 644 Makefile.VersionControl.txt "$extraprefix/$btmakefilepath"
 	call_install $SET_USR $SET_GRP -m 644 README "$extraprefix/$btmakefilepath"
-	call_install $SET_USR $SET_GRP -m 755 MakeVersionControl "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 755 make-release "$extraprefix/$btmakefilepath"
 	call_install $SET_USR $SET_GRP -m 755 test4sint_overflow.sh "$extraprefix/$btmakefilepath"
 	call_install $SET_USR $SET_GRP -m 644 libbtmakefile.a "$extraprefix/$btmakefilepath"
 	

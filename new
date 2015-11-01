@@ -72,7 +72,7 @@ if test -e $1; then
 fi
 mkdir $1
 # If you don't want to get the files hardlined, exchange the ln by cp:
-ln $sourcepackage/COPYING $sourcepackage/MakeVersionControl \
+ln $sourcepackage/COPYING $sourcepackage/make-release \
    $sourcepackage/Makefile.Include $sourcepackage/Makefile.VersionControl \
    $sourcepackage/Makefile.VersionControl.txt $sourcepackage/COPYRIGHT \
    $sourcepackage/VersionControl.test $sourcepackage/new $sourcepackage/smi \

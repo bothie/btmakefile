@@ -122,25 +122,25 @@ init-version:
 	$(MAKE) --no-print-directory version.h
 
 patch: version-control-clean
-	@$(shell btmakefile --path)/MakeVersionControl patch
+	@$(shell btmakefile --path)/make-release patch
 
 minor: version-control-clean
-	@$(shell btmakefile --path)/MakeVersionControl minor
+	@$(shell btmakefile --path)/make-release minor
 
 major: version-control-clean
-	@$(shell btmakefile --path)/MakeVersionControl major
+	@$(shell btmakefile --path)/make-release major
 
 test-patch: patch-test
 patch-test: version-control-clean
-	@$(shell btmakefile --path)/MakeVersionControl --test patch
+	@$(shell btmakefile --path)/make-release --test patch
 
 test-minor: minor-test
 minor-test: version-control-clean
-	@$(shell btmakefile --path)/MakeVersionControl --test minor
+	@$(shell btmakefile --path)/make-release --test minor
 
 test-major: major-test
 major-test: version-control-clean
-	@$(shell btmakefile --path)/MakeVersionControl --test major
+	@$(shell btmakefile --path)/make-release --test major
 
 #$(package)
 #$(copyrightyears)

@@ -1,9 +1,16 @@
 #!/bin/sh
 
 # Free error numbers -
-# First unused error number: 53
+# First unused error number: 54
 
 # Configuration:
+
+if ! test -d CVS
+then
+	echo "Currently, this script only supports CVS." >&2
+	echo "Patches to support other VCSses are welcome." >&2
+	exit 53
+fi
 
 if test "$1" == "--test"
 then
@@ -215,7 +222,7 @@ then
 	
 	sync; sync; sync ##################### DISK WRITE BARRIER #####################
 	
-	cvs commit -m "AUTOMATIC COMMIT [MakeVersionControl]: Update version for make $action from $prev_version to $version" .patch .minor .major
+	cvs commit -m "AUTOMATIC COMMIT [make-release]: Update version for make $action from $prev_version to $version" .patch .minor .major
 	
 	echo "Calling 'cvs tag $package-$major-$minor-$patch .' ..."
 	cvs tag $package-$major-$minor-$patch . || exit 38
