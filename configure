@@ -659,10 +659,10 @@ EOF
 			if $first
 			then
 				echo "yes"
-				echo "BTMAKEFILECFLAGS += -DHAVE_VA_COPY" >>Makefile.System
+				echo "BTMAKEFILECPPFLAGS += -DHAVE_VA_COPY" >>Makefile.System
 			else
 				echo "yes, but only with $ARG (foring it on)"
-				echo "BTMAKEFILECFLAGS += -DHAVE_VA_COPY $ARG" >>Makefile.System
+				echo "BTMAKEFILECPPFLAGS += -DHAVE_VA_COPY $ARG" >>Makefile.System
 			fi
 			return
 		}
@@ -731,7 +731,7 @@ test4ccflag_and_cxxflag "-fno-inline-small-functions" "FNO_LNLINE_SMALL_FUNCTION
 # TODO: Actually figure out, what CPU_CLASS is present
 echo "CPU_CLASS = x86" >>Makefile.System
 # TODO: Actually figure out, whether i486 instructions are available
-echo "BTMAKEFILECFLAGS += -DCPU_I486" >>Makefile.System
+echo "BTMAKEFILECPPFLAGS += -DCPU_I486" >>Makefile.System
 
 cat btmakefile.Makefile.foot >> btmakefile.Makefile
 
