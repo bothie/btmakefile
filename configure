@@ -171,10 +171,52 @@ $AUTOGENWARNING
 #
 ###########################################################################
 
-CONFIGURE_CC  = $CC
-CONFIGURE_CXX = $CXX
-CONFIGURE_CPP = $CPP
+ifndef COMPILER
+COMPILER=DEFAULT
+endif
+
+ifeq (\$(COMPILER),DEFAULT)
+CONFIGURE_CPP = $CPP -E
+CONFIGURE_CS  = $CC -S
+CONFIGURE_CXS = $CXX -S
+CONFIGURE_CC  = $CC -c
+CONFIGURE_CXX = $CXX -c
+CONFIGURE_SO  = $CXX -shared
+CONFIGURE_PI  = $CXX -shared
+CONFIGURE_DE  = $CXX
+CONFIGURE_SE  = $CXX -static
 CONFIGURE_AR  = ar
+endif
+
+ifeq (\$(COMPILER),GCC)
+CONFIGURE_CPP = cpp -E
+CONFIGURE_CS  = gcc -S
+CONFIGURE_CXS = g++ -S
+CONFIGURE_CC  = gcc -c
+CONFIGURE_CXX = g++ -c
+CONFIGURE_SO  = g++ -shared
+CONFIGURE_PI  = g++ -shared
+CONFIGURE_DE  = g++
+CONFIGURE_SE  = g++ -static
+CONFIGURE_AR  = ar
+endif
+
+ifeq (\$(COMPILER),LLVM)
+COMPILER=CLANG
+endif
+
+ifeq (\$(COMPILER),CLANG)
+CONFIGURE_CPP = clang -E
+CONFIGURE_CS  = clang -S
+CONFIGURE_CXS = clang -S
+CONFIGURE_CC  = clang -c
+CONFIGURE_CXX = clang -c
+CONFIGURE_SO  = clang -shared
+CONFIGURE_PI  = clang -shared
+CONFIGURE_DE  = clang
+CONFIGURE_SE  = clang -static
+CONFIGURE_AR  = ar
+endif
 
 HAVE_ANSI_COLORS = $HAVE_ANSI_COLORS
 
