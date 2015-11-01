@@ -1,0 +1,227 @@
+#! /bin/bash
+
+help() {
+	cat <<EOF
+Syntax: install <args>
+
+Possible args are:
+
+	--help			Prints this help
+	--install		Starts install
+	--prefix [1]		Sets prefix
+	--btmakefilepath [1]	Sets path for btmakefile's files
+	--exepath [1]		This MUST be found in the PATH - if not, you 
+				will end in a broken installation.
+	
+	--extra-prefixl [1][2]	Sets an extra prefix, where the files will be 
+				installed to.
+
+[1] The argument to this option SHOULD NOT contain any spaces. If you discard 
+    this constraint, you may end up in a broken installation.
+
+[2] --extra-prefixl is only use while installing. This is a hack for Gentoo, 
+    so we can install the package in the image directory, while it is in fact 
+    configured for another directory. Obviously, the right way had been to 
+    replace the install program, but don't tell me, tell the Gentoo 
+    developers.
+EOF
+}
+
+installing=false
+exit_after_sed=false
+
+while test "$#" != 0
+do
+	case "$1" in
+		--install)
+			installing=true;
+			shift
+			;;
+		
+		--help)
+			help
+			exit 1
+			;;
+		
+		--prefix)
+			shift
+			prefix="$1"
+			shift
+			;;
+		
+		--extra-prefix)
+			shift
+			extraprefix="$1"
+			shift
+			;;
+		
+		--btmakefilepath)
+			shift
+			btmakefilepath="$1"
+			shift
+			;;
+		
+		--exepath)
+			shift
+			exepath="$1"
+			shift
+			;;
+		
+		--mk-makefile-include)
+			exit_after_sed=true
+			shift
+			;;
+		
+		*)
+			echo "Unknown argument $1"
+			help
+			exit 2
+	esac
+done
+
+test -z "$prefix" && prefix=/usr/local
+test -z "$btmakefilepath" && btmakefilepath="$prefix/btmakefile"
+test -z "$exepath" && exepath="$prefix/bin"
+
+sed -e '
+s#@RECURSIVE-\([^@]*\)@#\
+real-\1:\
+btmake-\1-pre: real-\1-pre\
+btmake-\1-post: real-\1-post\
+real-\1-pre:\
+real-\1-post:\
+\1:\
+   ifdef DEBUG\
+	@echo "Making btmake-\1-pre ..."\
+   endif\
+	@$(MAKE) -f $(MAKEFILE) $(NPD) btmake-\1-pre || { echo -e -n "$(DEFAULTCOLOR)" \&\& exit 1; }\
+	\
+ifdef DIRS\
+   ifdef DEBUG\
+	@echo "Making DIRS $(DIRS) ..."\
+   endif\
+	@for i in $(foreach i,$(DIRS),$(i)); do \\\
+		MAKEFILE=Makefile $(MAKE) -f Makefile -C $$i $(NPD) \1 || { echo -e -n "$(DEFAULTCOLOR)" \&\& exit 1; }; \\\
+	done;\
+endif\
+	\
+ifdef SUBTARGETS\
+   ifdef DEBUG\
+	@echo "Making SUBTARGETS $(SUBTARGETS) ..."\
+   endif\
+	@for i in $(foreach i,$(SUBTARGETS),$(i)); do \\\
+		$(MAKE) -f $(MAKEFILE) $(NPD) $$i-\1 || { echo -e -n "$(DEFAULTCOLOR)" \&\& exit 1; }; \\\
+	done;\
+endif\
+	\
+ifdef SUBMAKES\
+   ifdef DEBUG\
+	@echo "Making SUBMAKES $(SUBMAKES) ..."\
+   endif\
+	@for i in $(foreach i,$(SUBMAKES),$(i)); do \\\
+		MAKEFILE=Makefile.$$i $(MAKE) -f Makefile.$$i $(NPD) \1 || { echo -e -n "$(DEFAULTCOLOR)" \&\& exit 1; }; \\\
+	done;\
+endif\
+	\
+	@$(MAKE) -f $(MAKEFILE) $(NPD) real-\1 || { echo -e -n "$(DEFAULTCOLOR)" \&\& exit 1; }\
+	\
+   ifdef DEBUG\
+	@echo "Making btmake-\1-post ..."\
+   endif\
+	@$(MAKE) -f $(MAKEFILE) $(NPD) btmake-\1-post || { echo -e -n "$(DEFAULTCOLOR)" \&\& exit 1; }#
+s#§§PATTERNRULE§\([^§]*\)§\([^§]*\)§\([^§]*\)§\([^§]*\)§\([^§]*\)§§#\
+\2: \1\
+ifndef PRINTFLAGS\
+   ifndef PRINTSOURCES\
+	@echo -e -n "$(ACTIONCOLOR)\3 $(OUTPUTCOLOR)$(THISDIR)/$@$(ACTIONCOLOR): $(ATTENTIONCOLOR)"\
+   else\
+	@echo -e -n "$(ACTIONCOLOR)\3 $(INPUTCOLOR)$(addprefix $(THISDIR)/,\4)$(ACTIONCOLOR) to $(OUTPUTCOLOR)$(THISDIR)/$@$(ACTIONCOLOR): $(ATTENTIONCOLOR)"\
+   endif\
+else\
+	@echo -e -n "$(ACTIONCOLOR)\3 $(INPUTCOLOR)$(addprefix $(THISDIR)/,\4)$(ACTIONCOLOR) to $(OUTPUTCOLOR)$(THISDIR)/$@$(ACTIONCOLOR) with cmdline $(FLAGCOLOR)\5$(ACTIONCOLOR): $(ATTENTIONCOLOR)"\
+endif\
+	@if ! ( \5 ) 2>$(STDERROR); then \\\
+		echo -e "$(FAILEDCOLOR)failed:"; \\\
+		cat $(STDERROR); \\\
+		echo -e -n "$(DEFAULTCOLOR)"; \\\
+		false; \\\
+	else \\\
+		if test -s $(STDERROR); then \\\
+			echo -e "$(WARNINGCOLOR)ok, but warnings:"; \\\
+			cat $(STDERROR); \\\
+			echo -e -n "$(DEFAULTCOLOR)"; \\\
+		else \\\
+			echo -e "$(WELLCOLOR)ok.$(DEFAULTCOLOR)"; \\\
+		fi; \\\
+	fi#
+' < Makefile.Include.in > Makefile.Include
+
+if $exit_after_sed
+then
+	exit 0
+fi
+
+call_install() {
+	echo install "$@"
+	install "$@"
+}
+
+do_install() {
+#	SET_USR="-o root"
+#	SET_GRP="-g root"
+	
+	if ! test -d CVS
+	then
+		version=`cat .major`.`cat .minor`.`cat .patch`
+	else
+		version=`cat .major`.`cat .minor`.`cat .patch`-cvs
+	fi
+	
+	sed -e "s#@btmakefilepath@#$btmakefilepath#
+s#@exepath@#$exepath/btmakefile#
+s#@version@#$version#" < btmakefile.in > btmakefile
+	
+	rmdir wrappers    2>/dev/null
+	rmdir workarounds 2>/dev/null
+	
+	call_install -d $SET_USR $SET_GRP -m 755 "$extraprefix/$exepath"
+	call_install -d $SET_USR $SET_GRP -m 755 "$extraprefix/$btmakefilepath"
+	test -d wrappers     && call_install -d $SET_USR $SET_GRP -m 755 "$extraprefix/$btmakefilepath/wrappers" 
+	test -d wrappers/sys && call_install -d $SET_USR $SET_GRP -m 755 "$extraprefix/$btmakefilepath/wrappers/sys" 
+	test -d workarounds  && call_install -d $SET_USR $SET_GRP -m 755 "$extraprefix/$btmakefilepath/workarounds" 
+	
+	call_install $SET_USR $SET_GRP -m 644 AUTHORS "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 COPYING "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 COPYRIGHT "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 Makefile "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 Makefile.Config "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 Makefile.Config.* "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 Makefile.VersionControl "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 Makefile.VersionControl.txt "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 644 README "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 755 MakeVersionControl "$extraprefix/$btmakefilepath"
+	call_install $SET_USR $SET_GRP -m 755 test4sint_overflow.sh "$extraprefix/$btmakefilepath"
+	
+	# Generated files:
+	call_install $SET_USR $SET_GRP -m 644 Makefile.System "$extraprefix/$btmakefilepath"
+	test -d wrappers     && call_install $SET_USR $SET_GRP -m 644    wrappers/*.h      "$extraprefix/$btmakefilepath/wrappers"
+	test -d wrappers/sys && call_install $SET_USR $SET_GRP -m 644    wrappers/sys/*.h  "$extraprefix/$btmakefilepath/wrappers/sys"
+	test -d workarounds  && call_install $SET_USR $SET_GRP -m 644 workarounds/*.{a,so} "$extraprefix/$btmakefilepath/workarounds"
+	
+	call_install $SET_USR $SET_GRP -m 755 btmakefile "$extraprefix/$exepath"
+	
+	# Most important last, so if anything fails, nothin works at all
+	call_install $SET_USR $SET_GRP -m 644 Makefile.Include "$extraprefix/$btmakefilepath"
+}
+
+$installing || (
+	help
+	exit 1
+) || exit 1
+
+test -f Makefile.System || (
+	echo "Please configure first"
+	exit 1
+) || exit 1
+
+do_install

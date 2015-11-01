@@ -1,0 +1,695 @@
+#! /bin/sh
+
+#AR, CC, CXX  (normal ar, cc und c++)
+#SO, PI, LD, LS (normal alles $(CC) oder $(CXX), je nach dem, ob da C++-Dateien 
+#involviert sind oder nicht.
+
+#
+# Some general purpose functions
+#
+
+# Take first argument, and print:
+# true       if it is either yes, on, 1, true, enable(d)
+# false      if it is either no, off, 0, false, disable(d)
+# undefined  if it is anything different
+boolean () {
+	case "$1" in
+		yes)      echo true; ;;
+		on)       echo true; ;;
+		1)        echo true; ;;
+		true)     echo true; ;;
+		enable)   echo true; ;;
+		enabled)  echo true; ;;
+		
+		no)       echo false; ;;
+		off)      echo false; ;;
+		0)        echo false; ;;
+		false)    echo false; ;;
+		disable)  echo false; ;;
+		disabled) echo false; ;;
+		
+		*)        echo undefined; ;;
+	esac
+}
+
+bell () {
+	if ! $no_bell
+	then
+		echo
+		echo "$1"
+		echo
+		echo " * (omit this (and any other) warning in future using --no-bell switch)"
+		for i in 1 2 3 4 5;
+		do
+			echo -en "\a"
+			sleep 1
+		done
+		echo
+	fi
+}
+
+#
+# Setup and cleanup
+#
+
+cmdline () {
+	# Set defaults
+	CC=gcc
+	CXX=g++
+	CPP=cpp
+	HAVE_ANSI_COLORS=true
+	
+	test -x ./configure-prev && . ./configure-prev
+	
+	# Process command line
+	
+	BAILOUT=false
+	no_bell=false
+	
+	while test $# != 0
+	do
+		case "$1" in
+			--cc)
+				shift
+				CC="$1"
+				shift
+				;;
+			
+			--cxx)
+				shift
+				CXX="$1"
+				shift
+				;;
+			
+			--cpp)
+				shift
+				CPP="$1"
+				shift
+				;;
+			
+			--have-ansi-colors)
+				shift
+				HAVE_ANSI_COLORS=`boolean "$1"`
+				shift
+				;;
+			
+			--no-bell)
+				shift
+				no_bell=true
+				;;
+			
+			*)
+				echo "Unknown argument $1"
+				BAILOUT=true
+				shift
+				;;
+		esac
+	done
+	
+	if $BAILOUT
+	then
+		cat >&2 <<EOF
+Syntax: $0 [options]
+
+Availaible options + meaning
+
+	[argument]		[description of the 'enable'-form.]
+	
+	--cc <$CC> (Master default is gcc)
+	
+		Specify the 3.x.y gcc C compiler
+	
+	--cxx <$CXX> (Master default is g++)
+	
+		Specify the 3.x.y gcc C++ compiler
+	
+	--cpp <$CPP> (Master default is cpp)
+	
+		Specify the 3.x.y gcc C preprocessor
+	
+	--have-ansi-colors <bool> (Master default is true)
+	
+		Tell, if you want the BtMakeFile to output using colors. 
+EOF
+		exit 1
+	fi
+	
+	# Store changed values
+	
+	cat >configure-prev <<EOF
+CC=$CC
+CXX=$CXX
+CPP=$CPP
+HAVE_ANSI_COLORS=$HAVE_ANSI_COLORS
+EOF
+
+	chmod +x configure-prev
+}
+
+setup () {
+	# Get some common variables
+	
+	AUTOGENWARNING="###########################################################################
+#
+#   ***  WARNING  ***  WARNING  ***  WARNING  ***
+#
+###########################################################################
+#
+# Automatic generated file. Don't modify this file.
+#
+# Generated on `date` by configure
+#
+###########################################################################"
+	
+	# Initialise some files
+	
+	cat > Makefile.System <<EOF
+$AUTOGENWARNING
+#
+# This are configuration variables which only describe the system's 
+# properties, and should therefore never need to be overridden.
+#
+###########################################################################
+
+CONFIGURE_CC  = $CC
+CONFIGURE_CXX = $CXX
+CONFIGURE_CPP = $CPP
+CONFIGURE_AR  = ar
+
+HAVE_ANSI_COLORS = $HAVE_ANSI_COLORS
+
+EOF
+
+	test -d wrappers && rm -fr wrappers
+	mkdir wrappers
+	
+	test -d workarounds && rm -fr workarounds
+	mkdir workarounds
+	
+	# Makeline Merge sed script
+	cat >configure.sed <<EOF
+:goon
+s/\\\\//
+t append
+q
+:append
+N
+s/\\
+//
+t goon
+b goon
+EOF
+}
+
+cleanup () {
+	rm -f configure.*
+}
+
+#
+# The actual testing functions
+#
+
+test4ostype () {
+	echo -n "Checking, what platform you are using ... "
+	
+	OSTYPE=`uname -s`
+	
+	if test -z "$OSTYPE"; then
+		cat <<EOF
+failed!
+
+Oops, »uname -s« returned an empty string.
+
+If you know a *secure* way to identify your platform, report it.
+That will be the first step for supporting your platform.
+
+Hint: You may try to make all-linux or similar, to test, if 
+      that works for you. If it does, please report it to me.
+
+Skipping generation of forward rules for all
+EOF
+	else
+		echo "$OSTYPE"
+		
+		echo -n "Checking if your os is supported ... "
+		
+		case "$OSTYPE" in
+			Linux)
+				echo "yes"
+				TARGET_LC="linux"
+				TARGET_UC="LINUX"
+				;;
+			
+			MINGW32_*|CYGWIN_*)
+				echo "yes"
+				TARGET_LC="win32"
+				TARGET_UC="WIN32"
+				;;
+			
+			FreeBSD|NetBSD|OpenBSD|SunOS)
+				cat <<EOF
+no!
+
+Hint: You may try to make all-linux or similar, to test, if 
+      that works for you. If it does, please report it to me.
+
+Skipping generation of forward rules for all
+EOF
+				exit 1
+				;;
+			
+			Darwin)
+				echo "yes"
+				TARGET_LC="macosx"
+				TARGET_UC="MACOSX"
+				;;
+			
+			For_BeOS:)
+				echo "yes"
+				TARGET_LC="beos"
+				TARGET_UC="BEOS"
+				;;
+			
+			*)
+				cat <<EOF
+no!
+
+Please report the following OS identification string to me: <$OSTYPE>
+
+Hint: You may try to make all-linux or similar, to test, if 
+      that works for you. If it does, please report it to me.
+
+Skipping generation of forward rules for all
+EOF
+				;;
+		esac
+	fi
+	
+	cat >>Makefile.System <<EOF
+ifndef TARGET
+
+ALL=skip-all
+CLEAN=skip-clean
+DEPCLEAN=skip-depclean
+DEP=skip-dep
+INSTALL=skip-install
+
+all: all-$TARGET_LC
+clean: clean-$TARGET_LC
+depclean: depclean-$TARGET_LC
+dep: dep-$TARGET_LC
+install: install-$TARGET_LC
+
+else
+
+ALL=real-all
+CLEAN=real-clean
+DEPCLEAN=real-depclean
+DEP=real-dep
+INSTALL=real-install
+
+include \$(BTMAKEPATH)/Makefile.Config.\$(TARGET)
+
+endif
+EOF
+}
+
+test4gcc3 () {
+	echo -n "Checking wether $1 is gcc-3 ... "
+	if test "`$1 -dumpversion | awk -F . '{ print $1 }' 2>/dev/null`" -ge 3; then
+		echo "yes"
+	else
+		echo "no"
+		cat >&2 <<EOF
+
+Your default gcc is not of version 3.x.y. We need at gcc 3.x.y to work. 
+Please call configure and specify --cc <gcc-3> with <gcc-3> being the 
+name of the executable of gcc 3.x.y or higher.
+EOF
+		exit 1
+	fi
+}
+
+test4gpp3 () {
+	echo -n "Checking wether $1 is g++-3 ... "
+	if test "`$1 -dumpversion | awk -F . '{ print $1 }' 2>/dev/null`" -ge 3; then
+		echo "yes"
+	else
+		echo "no"
+		cat >&2 <<EOF
+
+Your default g++ is not of version 3.x.y. We need at g++ 3.x.y to work. 
+Please call configure and specify --cxx <g++-3> with <g++-3> being the 
+name of the executable of g++ 3.x.y or higher.
+EOF
+		exit 1
+	fi
+}
+
+test4cpp3 () {
+	echo -n "Checking wether $1 is cpp-3 ... "
+	if test "`$1 -dumpversion | awk -F . '{ print $1 }' 2>/dev/null`" -ge 3; then
+		echo "yes"
+	else
+		echo "no"
+		cat >&2 <<EOF
+
+Your default cpp is not of version 3.x.y. We need at cpp 3.x.y to work. 
+Please call configure and specify --cpp <cpp-3> with <cpp-3> being the 
+name of the executable of cpp 3.x.y or higher.
+EOF
+		exit 1
+	fi
+}
+
+test4sint_overflow () {
+	echo -n "Checking for gcc-4.1 signed integer overflow bug ... "
+	if ./test4sint_overflow.sh "$CC -c" "$CC" quiet
+	then
+		echo "not present ;-)"
+	else
+		echo "present"
+		bell "$(./test4sint_overflow.sh "$CC -c" "$CC" 2>&1)"
+	fi
+}
+
+test4stringB4stdbool_h () {
+	echo -n "Checking wether <string> must be included before <stdbool.h> ... "
+	cat >configure.cpp <<EOF
+#include <stdbool.h>
+#include <string>
+int main(void) {}
+EOF
+	if $CXX -W -Wall configure.cpp -c -o configure.o 2>/dev/null; then
+		echo "no"
+	else
+		echo "yes, generating wrapper stdbool.h file"
+		cat >configure.cpp <<EOF
+#include <stdbool.h>
+int main(void) {}
+EOF
+		STDBOOL_H=`( $CXX -W -Wall configure.cpp -E -M -MP -o configure.o; cat configure.o; ) | tee configure.stdbool.h.MP | sed -f configure.sed | tee configure.stdbool.h.MP2 | awk '{ print $3 }'`
+		cat >configure.cpp <<EOF
+#include <string>
+int main(void) {}
+EOF
+		STRING=`( $CXX -W -Wall configure.cpp -E -M -MP -o configure.o; cat configure.o; ) | tee configure.string.MP | sed -f configure.sed | tee configure.string.MP2 | awk '{ print $3 }'`
+		cat > wrappers/stdbool.h << EOF
+/*
+$AUTOGENWARNING
+*/
+
+#ifdef __cplusplus
+#include "$STRING"
+#endif /* #ifdef __cplusplus */
+#include "$STDBOOL_H"
+EOF
+	fi
+}
+
+test4TIOCGWINSZ () {
+	echo -n "Checking if we have the winsize feature ... "
+	
+	cat >configure.c <<EOF
+#include <termios.h>
+#include <sys/ioctl.h>
+
+int main(void) {
+	struct winsize wsz;
+	
+	ioctl(0,TIOCGWINSZ,&wsz);
+	
+	return wsz.ws_row+wsz.ws_col;
+}
+EOF
+	if gcc -c -o configure.o configure.c 2>configure.gcc-error
+	then
+		(
+			echo
+			echo "CFLAGS+=-DTIOCGWINSZ"
+		) >> Makefile.System
+		echo "yes"
+	else
+		echo "no"
+	fi
+}
+
+test4pkgconfig () {
+	if type -p pkg-config >/dev/null
+	then
+		HAVE_PKG_CONFIG=true
+	else
+		HAVE_PKG_CONFIG=false
+	fi
+}
+
+test4gnet () {
+	echo -n "Checking for libgnet ... "
+	
+	# First test for gnet-2.0
+	if $HAVE_PKG_CONFIG \
+	&& pkg-config gnet-2.0
+	then
+		HAVE_GNET=true
+		HAVE_GNET_VERSION=$(pkg-config gnet-2.0 --modversion)
+		echo "$HAVE_GNET_VERSION"
+		(
+			echo
+			echo "HAVE_GNET=$HAVE_GNET"
+			echo "HAVE_GNET_VERSION=$HAVE_GNET_VERSION"
+			echo "BTMAKEFILE-GNET-CFLAGS=$(pkg-config gnet-2.0 --cflags) -DHAVE_GNET -DHAVE_GNET_VERSION=\"HAVE_GNET_VERSION\""
+			echo "BTMAKEFILE-GNET-LDFLAGS=$(pkg-config gnet-2.0 --libs)"
+		) >> Makefile.System
+	else
+		if type -p gnet-config >/dev/null
+		then
+			HAVE_GNET=true
+			HAVE_GNET_VERSION=$(gnet-config --version)
+			echo "$HAVE_GNET_VERSION"
+			(
+				echo
+				echo "HAVE_GNET=$HAVE_GNET"
+				echo "HAVE_GNET_VERSION=$HAVE_GNET_VERSION"
+				echo "BTMAKEFILE-GNET-CFLAGS=$(gnet-config --cflags) -DHAVE_GNET -DHAVE_GNET_VERSION=\"HAVE_GNET_VERSION\""
+				echo "BTMAKEFILE-GNET-LDFLAGS=$(gnet-config --libs)"
+			) >> Makefile.System
+		else
+			echo "not found"
+			bell "Programs using btmakefile won't use libgnet even if you install
+it later until you reinstall btmakefile"
+		fi
+	fi
+}
+
+test4libcap () {
+	echo -n "Checking for libcap ... "
+	
+	cat >configure.c <<EOF
+#include <sys/capability.h>
+
+int main(void) {
+	cap_t caps;
+	return 0;
+}
+EOF
+	
+	if gcc -c -o configure.o configure.c 2>configure.gcc-error
+	then
+		(
+			echo
+			echo "HAVE_LIBCAP=true"
+			echo ""
+			echo "BTMAKEFILE-LIBCAP-CFLAGS=-DHAVE_LIBCAP"
+			echo "BTMAKEFILE-LIBCAP-LDFLAGS=-lcap"
+		) >> Makefile.System
+		echo "yes"
+	else
+		echo "no"
+	fi
+}
+
+test4pkgconfig () {
+	if type -p pkg-config >/dev/null
+	then
+		HAVE_PKG_CONFIG=true
+	else
+		HAVE_PKG_CONFIG=false
+	fi
+}
+
+test4big_files_bug () {
+	echo -n "Checking wether big files need special functions ... "
+	cat >configure.c <<EOF
+#include <unistd.h>
+#include <fcntl.h>
+
+int main(void) {
+	int fd=open("configure.tmp",O_RDWR);
+	if (!fd) return 1;
+	if (2147483647!=lseek(fd,2147483647,SEEK_SET)) return 2;
+	if (2!=write(fd,"12",2)) return 3;
+	unlink("configure.tmp");
+	return 0;
+}
+EOF
+	if $CC -W -Wall configure.c -o configure.elf && ./configure.elf
+	then
+		echo "no"
+	else
+		echo "yes, generating wrappers for unistd.h, sys/types.h"
+		cat >configure.c <<EOF
+#include <sys/types.h>
+int main(void) {}
+EOF
+		SYS_TYPES_H=`( $CC -W -Wall configure.c -E -M -MP -o configure.o; cat configure.o; ) | tee configure.sys_types.h.MP | sed -f configure.sed | tee configure.sys_types.h.MP2 | awk '{ print $3 }'`
+		cat >configure.c <<EOF
+#include <unistd.h>
+int main(void) {}
+EOF
+		UNISTD_H=`( $CC -W -Wall configure.c -E -M -MP -o configure.o; cat configure.o; ) | tee configure.sys_types.h.MP | sed -f configure.sed | tee configure.sys_types.h.MP2 | awk '{ print $3 }'`
+		cat >configure.c <<EOF
+#include <fcntl.h>
+int main(void) {}
+EOF
+		FCNTL_H=`( $CC -W -Wall configure.c -E -M -MP -o configure.o; cat configure.o; ) | tee configure.sys_types.h.MP | sed -f configure.sed | tee configure.sys_types.h.MP2 | awk '{ print $3 }'`
+		mkdir wrappers/sys 2>/dev/null
+		cat >wrappers/sys/types.h <<EOF
+#ifndef BT_SYS_TYPES_H
+#define BT_SYS_TYPES_H
+
+/*
+$AUTOGENWARNING
+*/
+
+#include "$SYS_TYPES_H"
+
+#define sys_types_off_t off_t
+#define off_t bt_off_t
+
+typedef long long off_t;
+
+#endif // #ifndef BT_SYS_TYPES_H
+EOF
+		cat >wrappers/unistd.h <<EOF
+#ifndef BT_UNISTD_H
+#define BT_UNISTD_H
+
+/*
+$AUTOGENWARNING
+*/
+
+#include <sys/types.h>
+
+#include "$UNISTD_H"
+
+#ifndef COMPILING_WORKAROUNDS
+#	define lseek bt_lseek
+#endif // #ifndef COMPILING_WORKAROUNDS
+
+#ifdef __cplusplus
+extern "C" {
+#endif // #ifdef __cplusplus
+
+bt_off_t bt_lseek(int fd,bt_off_t offset,int whence);
+
+#ifdef __cplusplus
+} // extern "C" 
+#endif // #ifdef __cplusplus
+
+#endif // #ifndef BT_UNISTD_H
+EOF
+		 cat >wrappers/fcntl.h <<EOF
+#ifndef BT_FCNTL_H
+#define BT_FCNTL_H
+
+/*
+$AUTOGENWARNING
+*/
+
+#include "$FCNTL_H"
+
+#ifndef COMPILING_WORKAROUNDS
+#	define open bt_open
+#endif // #ifndef COMPILING_WORKAROUNDS
+
+#ifdef __cplusplus
+extern "C" {
+#endif // #ifdef __cplusplus
+
+int bt_real_open(const char * pathname,int flags,mode_t mode);
+
+#ifdef __cplusplus
+} // extern "C"
+#endif // #ifdef __cplusplus
+
+#ifdef __cplusplus
+
+static inline int bt_open(const char * pathname,int flags,mode_t mode) { return bt_real_open(pathname,flags,mode); }
+static inline int bt_open(const char * pathname,int flags) { return bt_real_open(pathname,flags,0); }
+
+#else // #ifdef __cplusplus
+
+int bt_open(const char * pathname,int flags,...);
+
+#endif // #ifdef __cplusplus, else
+
+#endif // #ifndef BT_FCNTL_H
+EOF
+		./install --mk-makefile-include
+		make BTMAKEPATH=. -f workaround_big_files_bug.Makefile clean
+		make BTMAKEPATH=. -f workaround_big_files_bug.Makefile all
+		echo "BTMAKEFILELDFLAGS += -lworkaround_big_files_bug" >>Makefile.System
+		mv libworkaround_big_files_bug.* workarounds -i
+		version=`cat .major`.`cat .minor`.`cat .patch`
+		ln -s libworkaround_big_files_bug.$version.so workarounds/libworkaround_big_files_bug.so
+	fi
+}
+
+#
+# And here is everything called
+#
+
+cmdline "$@"           || exit 1
+
+# Wenn tiefe Suche nach brauchbaren gcc-Targets, JETZT den hier starten:
+#
+#	find / -type f -name '*-gcc' -not -name 'build-gcc' >/tmp/gcc-targets.lst 2>/dev/null &
+
+setup                  || exit 1
+
+test4ostype            || exit 1
+test4gcc3 "$CC"        || exit 1
+test4gpp3 "$CXX"       || exit 1
+test4cpp3 "$CPP"       || exit 1
+test4sint_overflow     || exit 1
+test4stringB4stdbool_h || exit 1
+test4TIOCGWINSZ        || exit 1
+test4pkgconfig
+test4gnet
+test4libcap
+test4big_files_bug
+
+# Wenn tiefe Suche nach brauchbaren gcc-Targets, JETZT auf find warten, und 
+# danach prüfen, ob die Zusatztools alle unter den entsprechenden Präfig 
+# vorhanden sind, und ob sich alles im Pfad befindet.
+#
+#Ansatz:
+#
+#for i in `cat /tmp/gcc-targets.lst`
+#do
+#	find "$i" -true -printf "%f\n"
+#done | sort -u | (
+#	while read gcc
+#	do
+#		if $gcc --version > /dev/null 2>&1
+#		then
+#			echo "$gcc"
+#		fi
+#	done
+#)
+
+cleanup                || exit 1
+
+#(
+#	gcc --version && g++ --version && test "`gcc -dumpversion`" = "`g++ -dumpversion`" && ar --version
+#) >/dev/null 2>/dev/null && echo "ok"

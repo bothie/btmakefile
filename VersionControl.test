@@ -1,0 +1,114 @@
+#!/bin/sh
+#
+# Script VersionControl.test, Copyright (C) 2001 by Bodo Thiesen <bothie@gmx.de>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc., 675 Mass
+# Ave, Cambridge, MA 02139, USA.
+#
+###############################################################################
+#
+# If you have changed the Version Control files, you can test it by running
+# this script. This script has been tested with bash and seems to work.
+#
+# This script uses the script new, and some files from this package. Move it
+# to the parent directory, like new. On how to do this, read the comments in
+# the file new.
+#
+# Now, make sure, that in the directory of this script and new, aren't existing
+# the directories or files, which match the pattern:
+#
+#   $package $package-* archive/$package archive/$package-*
+#
+# Where $package is set at the first command after this comments. If you
+# already have a such called package, use another name as predefined.
+#
+# After you did this, start this script from it's directory.
+#
+# Look to the output. If there appears an error, something went wrong.
+# Everything done by the script should be done without warnings and errors.
+#
+# THIS SCRIPT NEEDS THE PROGRAM fcd FROM THE PACKAGE bothie-utils COMPILED AND
+# RECHABLE VIA THE PATH ENVIRONMENT VARIABLE (i.e. after installing via 'make
+# install')!
+#
+package=hello
+
+if ! test -d archive; then mkdir archive; fi
+
+if test -z package; then
+	echo "Please set package to a name as mentioned in this script!"
+	exit 1
+fi
+rm -fR $package $package-* archive/$package archive/$package-* || exit 1
+./new $package || exit 1
+cd $package
+echo "#include <stdio.h>"               >> $package.c
+echo ""                                 >> $package.c
+echo "int main(int argc,char * argv) {" >> $package.c
+echo "	printf(\"Hello world!\n\");"    >> $package.c
+echo "}"                                >> $package.c
+make patch || exit 1
+make patch || exit 1
+make patch || exit 1
+make minor || exit 1
+make patch || exit 1
+make patch || exit 1
+make patch || exit 1
+make minor || exit 1
+make major || exit 1
+make patch || exit 1
+make patch || exit 1
+make major || exit 1
+make minor || exit 1
+make patch || exit 1
+cd ../archive
+mkdir $package || exit 1
+mv $package-* $package || exit 1
+cd $package || exit 1
+echo "$package-1.1.0"; gzip -cd $package-1.1.0.tar.gz | tar -x || exit 1; cp -R $package-1.1.0 $package-1.1.1p || exit 1; cd $package-1.1.1p; gzip -cd ../$package-1.1.1.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-1.1.1"; gzip -cd $package-1.1.1.tar.gz | tar -x || exit 1; cp -R $package-1.1.1 $package-1.1.2p || exit 1; cd $package-1.1.2p; gzip -cd ../$package-1.1.2.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-1.1.2"; gzip -cd $package-1.1.2.tar.gz | tar -x || exit 1; cp -R $package-1.1.2 $package-1.2.0p || exit 1; cd $package-1.2.0p; gzip -cd ../$package-1.2.0.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-1.2.0"; gzip -cd $package-1.2.0.tar.gz | tar -x || exit 1; cp -R $package-1.2.0 $package-1.2.1p || exit 1; cd $package-1.2.1p; gzip -cd ../$package-1.2.1.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-1.2.1"; gzip -cd $package-1.2.1.tar.gz | tar -x || exit 1; cp -R $package-1.2.1 $package-1.2.2p || exit 1; cd $package-1.2.2p; gzip -cd ../$package-1.2.2.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-1.2.2"; gzip -cd $package-1.2.2.tar.gz | tar -x || exit 1; cp -R $package-1.2.2 $package-1.2.3p || exit 1; cd $package-1.2.3p; gzip -cd ../$package-1.2.3.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-1.2.3"; gzip -cd $package-1.2.3.tar.gz | tar -x || exit 1; cp -R $package-1.2.3 $package-1.3.0p || exit 1; cd $package-1.3.0p; gzip -cd ../$package-1.3.0.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-1.3.0"; gzip -cd $package-1.3.0.tar.gz | tar -x || exit 1; cp -R $package-1.3.0 $package-2.1.0p || exit 1; cd $package-2.1.0p; gzip -cd ../$package-2.1.0.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-2.1.0"; gzip -cd $package-2.1.0.tar.gz | tar -x || exit 1; cp -R $package-2.1.0 $package-2.1.1p || exit 1; cd $package-2.1.1p; gzip -cd ../$package-2.1.1.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-2.1.1"; gzip -cd $package-2.1.1.tar.gz | tar -x || exit 1; cp -R $package-2.1.1 $package-2.1.2p || exit 1; cd $package-2.1.2p; gzip -cd ../$package-2.1.2.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-2.1.2"; gzip -cd $package-2.1.2.tar.gz | tar -x || exit 1; cp -R $package-2.1.2 $package-3.1.0p || exit 1; cd $package-3.1.0p; gzip -cd ../$package-3.1.0.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-3.1.0"; gzip -cd $package-3.1.0.tar.gz | tar -x || exit 1; cp -R $package-3.1.0 $package-3.2.0p || exit 1; cd $package-3.2.0p; gzip -cd ../$package-3.2.0.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-3.2.0"; gzip -cd $package-3.2.0.tar.gz | tar -x || exit 1; cp -R $package-3.2.0 $package-3.2.1p || exit 1; cd $package-3.2.1p; gzip -cd ../$package-3.2.1.diff.gz | patch -Etp1 || exit 1; cd ..
+echo "$package-3.2.1"; gzip -cd $package-3.2.1.tar.gz | tar -x || exit 1;
+fcd -c -i $package-1.1.1 $package-1.1.1p; fcd -c -i $package-1.1.1p $package-1.1.1
+fcd -c -i $package-1.1.2 $package-1.1.2p; fcd -c -i $package-1.1.2p $package-1.1.2
+fcd -c -i $package-1.2.1 $package-1.2.1p; fcd -c -i $package-1.2.1p $package-1.2.1
+fcd -c -i $package-1.2.2 $package-1.2.2p; fcd -c -i $package-1.2.2p $package-1.2.2
+fcd -c -i $package-1.2.3 $package-1.2.3p; fcd -c -i $package-1.2.3p $package-1.2.3
+fcd -c -i $package-2.1.1 $package-2.1.1p; fcd -c -i $package-2.1.1p $package-2.1.1
+fcd -c -i $package-2.1.2 $package-2.1.2p; fcd -c -i $package-2.1.2p $package-2.1.2
+fcd -c -i $package-3.2.1 $package-3.2.1p; fcd -c -i $package-3.2.1p $package-3.2.1
+cd $package-1.1.0; make all || exit 1; cd ..
+cd $package-1.1.1; make all || exit 1; cd ..
+cd $package-1.1.2; make all || exit 1; cd ..
+cd $package-1.2.0; make all || exit 1; cd ..
+cd $package-1.2.1; make all || exit 1; cd ..
+cd $package-1.2.2; make all || exit 1; cd ..
+cd $package-1.2.3; make all || exit 1; cd ..
+cd $package-1.3.0; make all || exit 1; cd ..
+cd $package-2.1.0; make all || exit 1; cd ..
+cd $package-2.1.1; make all || exit 1; cd ..
+cd $package-2.1.2; make all || exit 1; cd ..
+cd $package-3.1.0; make all || exit 1; cd ..
+cd $package-3.2.0; make all || exit 1; cd ..
+cd $package-3.2.1; make all || exit 1; cd ..

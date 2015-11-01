@@ -1,0 +1,61 @@
+Compiling
+=========
+
+	There is nothing to compile for the btmakefiles to work.
+
+Installing
+==========
+
+	$ ./install --help
+
+	The default is to install the btmakefile binary (a shell script) to 
+	/usr/local/bin/btmakefile and the other files to /usr/local/btmakefile, 
+	but you may change that if you want. The only restriction:
+	
+		THE SHELL SCRIPT btmakefile MUST BE REACHABLE VIA THE PATH
+		ENVIRONMENT VARIABLE.
+
+What is this all about?
+=======================
+
+	When I started to write programs on Linux (that was after using a well 
+	known IDE on DoS) I found the Makefile concept really frustrating. 
+	Each fucking header needed to be mentioned in the Makefile, and for 
+	each source file I needed 20 lines or so. My question was "is it 
+	possible to write SRC = <*.c> and then everything will be compiled 
+	together?". In fact, it is possible, and in general everything 
+	enumerated in SRC will be linked together. In situations, one don't 
+	want this, one have still to tell, which files get one executable, but 
+	in fact, the least benefit from using btmakefile is:
+
+		1. making the build process (slightly) slower
+
+			-> This is good as you can do some break in the 
+			   time [SCNR]
+		
+		Ok, the real reasons:
+		
+		1. You get fancy, colored, digest output of what happens (not 
+		   the 500 character lines of autobloat, but simply one line 
+		   telling what is currently compiled).
+		2. You don't need to write most things in the makefiles 
+		   yourself. Even recursions is handled by btmakefile -> 
+		   DIRS = ...
+		3. If you don't use CVS to manage the different versions, of 
+		   your progams, you can simply enter make {major,minor,patch} 
+		   to create a new distribution and switch to the next number 
+		   in the mentioned category (all lower categories are reset 
+		   to 0 automatically).
+
+Version Control - Why?
+======================
+
+	This has historical reasons. I think, I'll completely revamp version 
+	control, to work with CVS (and with other version control systems 
+	like BK or SV - if that is being requested). This will then cd to a 
+	temporary directory, checkout the source from scratch, try to build 
+	it - and only if that works, tag the version, create the distribution 
+	(i.e. tar and patch) and remove the temporary directory afterwards.
+	
+	Currently, CVS is *NOT* supported this way but that will come as I am 
+	working with CVS now.

@@ -1,0 +1,44 @@
+TARGETCPP           = $(LINUXTOOLSPREFIX)$(CONFIGURE_CPP)
+TARGETCXX           = $(LINUXTOOLSPREFIX)$(CONFIGURE_CXX) -c
+TARGETCC            = $(LINUXTOOLSPREFIX)$(CONFIGURE_CC)  -c
+TARGETCXS           = $(LINUXTOOLSPREFIX)$(CONFIGURE_CXX) -S
+TARGETCS            = $(LINUXTOOLSPREFIX)$(CONFIGURE_CC)  -S
+TARGETSO            = $(LINUXTOOLSPREFIX)$(CONFIGURE_CXX) -shared
+TARGETPI            = $(LINUXTOOLSPREFIX)$(CONFIGURE_CXX) -shared
+TARGETDE            = $(LINUXTOOLSPREFIX)$(CONFIGURE_CXX)
+TARGETSE            = $(LINUXTOOLSPREFIX)$(CONFIGURE_CXX) -static
+TARGETAR            = $(LINUXTOOLSPREFIX)$(CONFIGURE_AR)
+
+TARGETCPPFLAGS      = -D$(TARGET)
+TARGETCXXFLAGS      = -fPIC
+TARGETCCFLAGS       = -fPIC
+TARGETSOFLAGS       = -fPIC
+TARGETPIFLAGS       = -fPIC
+TARGETDEFLAGS       = -fPIC
+TARGETSEFLAGS       = -fPIC
+TARGETARFLAGS       = 
+
+ifdef NEED_NETWORK
+# TARGETLDFLAGS += /* nothing */
+endif
+
+ifdef NEED_RUNTIME_LINKER
+TARGETLDFLAGS += -ldl
+endif
+
+ARPREFIX            = lib
+ARSUFFIX            = .a
+DEPPREFIX           = 
+DEPSUFFIX           = .d
+DEPREFIX            = 
+DEOPTFIX            = -dynamic
+DESUFFIX            = 
+SEPREFIX            = 
+SEOPTFIX            = -static
+SESUFFIX            = 
+OBJPREFIX           = 
+OBJSUFFIX           = .o
+PIPREFIX            = lib
+PISUFFIX            = .so
+SOPREFIX            = lib
+SOSUFFIX            = .so

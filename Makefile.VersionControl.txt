@@ -1,0 +1,111 @@
+################################################################################
+#                                                                              #
+#                                                                              #
+#            V E R S I O N  -  C O N T R O L   V e r s i o n  1 . x            #
+#                                                                              #
+#                    Copyright (C) 2001-2007 by Bodo Thiesen                   #
+#                                                                              #
+#                                                                              #
+################################################################################
+
+What is the Version Control System, and what exactly does it?
+=============================================================
+
+I am a very forgetful programmer, which creates the problem, that my files
+change from day to day, but all this versions are the same 'version' of the
+project. To make sure, I don't distribute two different versions of a package,
+which have the same version identification, I created a special Makefile, which
+contained the rules 'next-version', 'patch', 'minor' and 'major'. The rule
+next-version should be used as dependency at every other point in the Makefile,
+which may cause any file to be recompiled, so that everytime the sources are
+compiled, the project got a new 'own-patch-version'. That was discarded before
+distributing the first package (bothie-utils), but there are still some
+comments about that rule in the files ...
+The other rules 'patch', 'minor' and 'major' create the a new tar.gz archive,
+and a .diff.gz patch. The source directory name (I will call this cdir - like
+'current directory' in future) doesn't matter, but it will be created a new
+directory (called ndir) in the source directorie's parent directory (pdir), and
+in the pdir will be expected the odir (a source directory tree of the last
+patch) which is only needed to create the diff.gz patch, what will be omitted,
+if the odir doesn't exist. The name convention for all directories and files
+are: 'packet_name-major.minor.patch' followed by an extension, if necessary.
+The .tar.gz archive and the .diff.gz patch file are created in the directory
+archive, which will be created in the pdir, if it isn't existing already
+there. If something goes wrong (i.e. a systen crash) you can reuse the rules,
+because they create a script, which deletes the ndir, and which is called in
+the three rules, if it is existing. A make clean will be done automatically in
+this rules, too.
+
+ATTENTION: AFTER CREATING THE ARCHIVE AND THE PATCH FILE, THE ODIR WILL BE
+           DELETED RECURSIVELY!
+
+How to use the Version Control Systen?
+======================================
+
+First, you have to create some files. That are:
+
+	.major        contains the major version number as an ascii string.
+	.minor        contains the minor version number as an ascii string.
+	.patch        contains the patch version number as an ascii string.
+	.last-version contains the last version of the package as ascii string,
+	              and is used to select the correct odir to patch against.
+
+The simplest way to create this files is using the script new, which must be
+copied (linked) to the pdir and called from there with one argument (the name
+of the new project). The script now creates the directory argv[1] and links
+some files to that directory (The Version Control Systen, some scripts, this
+documentation ...) and creates the three files 'patch', 'minor' and 'major'.
+A Makefile and a template C source code are generated, so that you can change
+to the new directory, call 'make all' and then have an executable, which prints
+the name and version number of the package just created. As root you may then
+run 'make install', and the executable is copied to '/usr/bin', chowned
+root:root, and chmoded 755.
+
+A Hint for non-make-freaks:
+===========================
+
+Take a look at the newly generated Makefile. You don't need to change the other
+files. Only add new sources to the list at the top (SRC for C sources, and
+SRCPP for C++ sources) and add the .o files as dependencies to the rules for
+the executable. To add more executables, add them to BIN and create a rule for
+that file, to list the .o files needed for that executable.
+
+-> You don't need own dependency informations about your sources. That are
+   created using the command 'gcc -M' (and a sed filter, which changes the
+   rule '*.o: *.c ...' to '*.o *.d: *.c ...')
+
+Further information
+===================
+
+See file Makefile.VersionControl for some (important) details.
+
+
+Patching
+========
+
+Patches may be applied with:
+
+	gzip -cd "diffs.gz" | patch -p1 -s -N -E -d "src-dir"
+
+where "diffs.gz" is the patch-file wich contains the patch from your current
+version to the next version (wich will be your current version after patching)
+and "src-dir" is the name of your source directory. If you store the
+patch-files in this directory, you may use the command:
+
+	gzip -cd "diffs.gz" | patch -p1 -s -N -E'
+
+instead. (The only change is omitting the '-d "src-dir"' argument.
+
+TODO (I will do it any day...):
+===============================
+
+-> Introduce a make rule 'update' which automatically patches to the next
+   patch level version (as long as the next-version patches are available in
+   the source directory)
+
+-> Introduce a new make rule 'depclean', which only deletes all dependency
+   files (*.d), to make sure, one can recompile a file after compiling it with
+   a mis-spelled header file name.
+   (You know it: 'make: *** No rule to make target `<mis-spelled header file
+   name>', needed by `<dependency file name>'.  Stop.'
+   The only solution: Delete '<dependency file name>'

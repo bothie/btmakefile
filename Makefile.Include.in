@@ -1,0 +1,1064 @@
+###############################################################################
+#
+# The btmakefile is Copyright (C) 2001-2007 by Bodo Thiesen <bothie@gmx.de>
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License
+#    along with this program; if not, write to the Free Software
+#    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+###############################################################################
+#
+# As soon as this file is being included, the following symbols MUST have been 
+# defined already or MUST NOT be defined anymore. If any of this symbols is 
+# definded, changed or undefined later, the behavior is undefined. The symbols 
+# TOPDIR, THISDIR and MAKEFILE MUST be defined, the symbol BAILOUT MUST NOT be 
+# defined in any way.
+#
+#    Source list symbol:
+#       
+#       * SRCS (every source file)
+#           
+#           Currently supported are C and C++ sources (including preprocessed), 
+#           Assembler sources and LANG sources. (-> c cpp cc i ii s langsrc)
+#           
+#           Each of this files, a dependency file will be created for (supposed 
+#           the btmakefile does know how to do this - the mentioned source 
+#           types it is guaranteed to be known). Each source file which is used 
+#           SHOULD, but don't NEED to be listed here (in the latter case, the 
+#           caller has to take care about compilation, creating dependancy 
+#           information and the like).
+#           
+#    Intermediate symbols:
+#       
+#       Warning: Each file listed in any of this symbols will be deleted on 
+#                make clean (for DEPS even on make depclean).
+#       
+#       * DEPS (the names of the dependency files as created from SRCS)
+#          
+#          If you create additional automatic dependency files, you can mention 
+#          them here and they will be used additionally.
+#          
+#       * INCS (preprocessed files)
+#       * ASMS (assembler files)
+#          
+#          Normally, this intermediate steps are being skipped. But calling 
+#          make <something>.i resp. make <something>.s (or the like) will 
+#          create a preprocessed (or Assembler) source file, which will later 
+#          on be kept up-to-date. In contrary to object files, this files will 
+#          be stored in the source directory.
+#          
+#       * OBJS (object files)[1]
+#          
+#          This are the object files. Not each of this files need to be 
+#          created, because only "used" object files will be created actually.
+#          
+#       * LANGS (lang files)[1]
+#          
+#          Like OBJS but for *.langsrc instead of *.c (and so on).
+#          
+# [1] The names in OBJS and LANGS are all prefixed by $(BUILDDIR)/ to get the 
+#     names of the files in the build directory
+# 
+#    Target symbols:
+#       
+#       * LIBTARGET (pseudo target for library for static and dynamic linking)
+#          
+#          This is a dummy target which will NEVER be made. But if you set 
+#          LIBTARGET to x then an appropriate ARTARGET (libx.a or the like) and 
+#          SOTARGET (libx.so or the like) will be made.
+#          
+#       * LIBOBJS (used only for LIBTARGET)
+#          
+#          If LIBTARGET is given, and either AROBJS or SOOBJS (or both) are not 
+#          set, they default to $(LIBOBJS), which itself defaults to $(OBJS).
+#          
+#       * ARTARGET (library for static linking)
+#       * SOTARGET (library for dynamic linking)
+#       * PITARGET (library for runtime linking - this is what most people call 
+#                  a 'plugin', but others call it e.g. bundle)
+#          
+#          This target will be make to create the mentioned type of library.
+#          
+#       * SETARGET (static executable)
+#       * DETARGET (dynamic executable)
+
+# EXETARGETS -> LDTARGETS oder LSTARGETS, was immer der Benutzer gerne hätte
+
+#          
+#          This two targets create actual programs.
+#          
+#    Other symbols:
+#       
+#       * AROBJS (used only for ARTARGET)
+#       * DEOBJS (used only for DETARGET)
+#       * PIOBJS (used only for PITARGET)
+#       * SEOBJS (used only for SETARGET)
+#       * SOOBJS (used only for SOTARGET)
+#          
+#          The object files mentioned here will be put in the archive resp. 
+#          library resp. plugin. If not set, this defaults to $(OBJS)
+#       
+#    Special symbols (omitting them is not allowed):
+#       
+#       * TOPDIR (points to the root of the package distribution relatively)
+#       * THISDIR (points back from TOPDIR to here)
+#            
+#            Thus:
+#               
+#               touch $(TOPDIR)/$(THISDIR)/$(ANYPATH)
+#               
+#            MUST have the same effect as
+#               
+#               touch $(ANYPATH)
+#               
+#       * MAKEFILE (points to the current mastermakefile)
+#            
+#            Thus: make rule1 will have the same effect if the makefile is either
+#               
+#               rule1: rule2
+#               
+#            or
+#               
+#               rule1:
+#               <TAB>make -f $(MAKEFILE) rule2
+#               
+#       * DEBUG (Print some useful debug information)
+#       * BAILOUT
+#       * BUILDROOT
+#          
+#          All created files (except for the ones where it is mentioned for) 
+#          will come into this directory tree. If BUILDROOT is relative, the 
+#          actual build directory will be $(TOPDIR)/$(BUILDROOT)/$(THISDIR). 
+#          If BUILDROOT is absolute, the actual build directory *should* be 
+#          $(BUILDROOT)/$(THISDIR), but currently, absolute BUILDROOT are not 
+#          supported (and may cause strange behavior).
+#          
+#       * BUILDDIR (internal use)
+#          
+#          This is the (relative or absolute) path to where the targets will 
+#          be created in.
+#          
+#       * BUILD_DYNAMIC (shall we build dynamic executables and libraries?)
+#       * BUILD_DYNAMIC_EXES (shall we build dynamic executables?)
+#       * BUILD_DYNAMIC_LIBS (shall we build dynamic executables?)
+#       * BUILD_STATIC (shall we build static executables and libraries?)
+#       * BUILD_STATIC_EXES (shall we build static executables?)
+#       * BUILD_STATIC_LIBS (shall we build static executables?)
+#          
+#          Setting either of this to true causes the appropriate thing to be 
+#          created. BUILD_DYNAMIC_EXES / BUILD_DYNAMIC_LIBS overrides 
+#          BUILD_DYNAMIC for executables / libraries. Same applies to 
+#          BUILD_STATIC accordingly. If BUILD_DYNAMIC or BUILD_STATIC is not 
+#          set, true will be assumed for both.
+#          
+#       * BUILD_DEFAULT (what will be the default version? dynamic or static?)
+#          
+#          This variables affects the suffix of the file. If BUILD_DYNAMIC_EXES 
+#          is true, and BUILD_DEFAULT != dynamic, the exe's name will be 
+#          <something>-dynamic(.exe). If BUILD_DEFAULT == dynamic, the 
+#          executable will be called <something>(.exe). If BUILD_DEFAULT is 
+#          static, the same applies to BUILD_STATIC_EXES. Creation of libraries 
+#          is not affected by this variable in any ways, as their names differ 
+#          in any case. Default is dynamic.
+#          to dynamic there).
+#
+#	* PRINTFLAGS
+#
+#	   Print the whole command line of compiler runs etc?
+#          
+#    Reserved symbol name spaces:
+#       
+#       * BTMAKE*
+#       * REAL* (for stuff like REALCXXFLAGS)
+#       * *TARGET[S]
+#       * *S (for stuff like ASMS and the like, which must be user visible - so 
+#         MARS may be used if you assume, that there will never be anything 
+#         (source, intermediate or target) which will be called MAR - but that 
+#         would be your own risk, officially those names are reserved, too)
+#       * *PREFIX
+#       * *SUFFIX
+#       
+# Variables like HAVE_GNET will be set in Makefile.System. You may override 
+# that using /etc/btmakefile.config (or later, e.g. on a per-packet base). To 
+# do so, simply set it to true or false respectively. You don't need to 
+# reinstall btmakefile, if you e.g. install gnet later if you simply add the 
+# variables. NOTE: Many libraries need more than the simple HAVE variable, e.g. 
+# HAVE_lib_VERSION is commonly declared too. Do unless you really know, what 
+# you're doing, reinstall btmakefile after any library change, if you intend to 
+# install a program, which uses btmakefile and may benefit from the newly 
+# installed library.
+#
+###############################################################################
+#
+# $(BTMAKEFILE)/COPYRIGHT is guaranteed to be the short GNU GPL v2 intro. You 
+# may define your own COPYRIGHT file by storing it in $(TOPDIR)/COPYRIGHT which 
+# will then be used in place of $(BTMAKEFILE)/COPYRIGHT.
+#
+###############################################################################
+
+RM=rm
+
+ifndef BTMAKEPATH
+BTMAKEPATH=$(shell btmakefile --path)
+endif
+
+#
+# Check wether we are making clean. This is used e.g. to decide wether to 
+# include automatic generated dependency makefiles!
+#
+# Do you know a more efficient way for this? Then please tell me how!
+
+ifneq ($(MAKECMDGOALS),uninstall)
+ifneq ($(MAKECMDGOALS),dist)
+ifneq ($(MAKECMDGOALS),patch)
+
+ifneq ($(MAKECMDGOALS),version-control-clean)
+ifneq ($(MAKECMDGOALS),minor)
+ifneq ($(MAKECMDGOALS),major)
+
+ifneq ($(MAKECMDGOALS),clean)
+ifneq ($(MAKECMDGOALS),btmake-clean-pre)
+ifneq ($(MAKECMDGOALS),btmake-clean-post)
+
+ifneq ($(MAKECMDGOALS),depclean)
+ifneq ($(MAKECMDGOALS),btmake-depclean-pre)
+ifneq ($(MAKECMDGOALS),btmake-depclean-post)
+
+ifneq ($(MAKECMDGOALS),real-clean)
+ifneq ($(MAKECMDGOALS),real-depclean)
+
+NOT_MAKING_CLEAN=true
+
+endif
+endif
+
+endif
+endif
+endif
+
+endif
+endif
+endif
+
+endif
+endif
+endif
+
+endif
+endif
+endif
+
+all:
+
+include $(BTMAKEPATH)/Makefile.System
+include $(BTMAKEPATH)/Makefile.Config
+
+ifdef BAILOUT
+X := $(BAILOUT)
+BAILOUT = BAILOUT
+$(MAKECMDGOALS): bailout
+endif
+
+ifndef TOPDIR
+BAILOUT += TOPDIR
+$(MAKECMDGOALS): bailout
+# IGNORE := $(shell echo "BtMakeFile: TOPDIR was not defined, MAKECMDGOALS=$(MAKECMDGOALS)" >&2)
+endif
+
+ifndef THISDIR
+BAILOUT += THISDIR
+$(MAKECMDGOALS): bailout
+# IGNORE := $(shell echo "BtMakeFile: THISDIR was not defined, MAKECMDGOALS=$(MAKECMDGOALS)" >&2)
+endif
+
+ifndef MAKEFILE
+BAILOUT += MAKEFILE
+$(MAKECMDGOALS): bailout
+# IGNORE := $(shell echo "BtMakeFile: MAKEFILE was not defined, MAKECMDGOALS=$(MAKECMDGOALS)" >&2)
+endif
+
+ifdef NOT_MAKING_CLEAN
+ifdef TARGET
+IGNORE:=$(shell $(BTMAKEPATH)/test4sint_overflow.sh "$(TARGETCC)" "$(TARGETDE)" "quiet" 1>&2)
+#ifeq ($(IGNORE),)
+#BAILOUT += BROKEN_CC
+#$(MAKECMDGOALS): bailout
+#endif
+endif
+endif
+
+ifdef DEBUG
+export DEBUG
+DEBUG := $(shell echo -e "This run is: make -f $(THISDIR)/$(MAKEFILE) $(MAKECMDGOALS)" >&2)
+DEBUG := $(shell echo "DIRS=$(DIRS)" >&2)
+DEBUG := $(shell echo "SUBTARGETS=$(SUBTARGETS)" >&2)
+DEBUG := $(shell echo "SUBMAKES=$(SUBMAKES)" >&2)
+DEBUG := $(shell echo "SRCS=$(SRCS)" >&2)
+DEBUG := true
+PRINTFLAGS = true
+endif
+
+bailout:
+ifdef BAILOUT
+	@echo MAKECMDGOALS=$(MAKECMDGOALS) >&2
+ifeq (BAILOUT,$(findstring BAILOUT,$(BAILOUT)))
+	@echo "BtMakeFile: BAILOUT was defined" >&2
+endif
+ifeq (TOPDIR,$(findstring TOPDIR,$(BAILOUT)))
+	@echo "BtMakeFile: TOPDIR was not defined" >&2
+endif
+ifeq (THISDIR,$(findstring THISDIR,$(BAILOUT)))
+	@echo "BtMakeFile: THISDIR was not defined" >&2
+endif
+ifeq (MAKEFILE,$(findstring MAKEFILE,$(BAILOUT)))
+	@echo "BtMakeFile: MAKEFILE was not defined" >&2
+endif
+ifeq (BROKEN_CC,$(findstring BROKEN_CC,$(BAILOUT)))
+	@$(BTMAKEPATH)/test4sint_overflow.sh "$(TARGETCC)" "$(TARGETDE)"
+endif
+	@echo "BtMakeFile: Cannot continue due to previous errors, bailing out" >&2
+	@false
+endif
+	@true
+
+ifndef BUILD_DEFAULT
+BUILD_DEFAULT = dynamic
+endif # ifndef BUILD_DEFAULT
+
+.SUFFIXES:
+
+NOP=@true
+
+ifndef NPD
+NPD=--no-print-directory
+endif
+
+PHONY = \
+	all \
+	bailout \
+	clean \
+	depclean \
+	help \
+	install \
+	print-copyright \
+	reset-color \
+	smi \
+	uninstall \
+	valgrind \
+
+.PHONY: $(PHONY)
+
+#
+# Create some filelists from others
+#
+# $(addsuffix .c,foo bar)
+# $(addprefix src/,foo bar)
+# $(filter %.o %.oo %.lang,$(OBJS))
+# $(TOPDIR)/build-$(TARGETLC)/$(THISDIR)/
+
+ifndef BUILDROOT
+#BUILDROOT = build-$(TARGETLC) <-- Das soll mal so werden, aktuell wird das aber mehr schaden als nutzen.
+BUILDROOT = .
+endif
+
+#wenn BUILDROOT absolut:
+#BUILDDIR = $(BUILDROOT)/$(THISDIR)
+#sonst
+BUILDDIR = $(TOPDIR)/$(BUILDROOT)/$(THISDIR)
+
+%$(OBJSUFFIX): $(BUILDDIR)/%$(OBJSUFFIX)
+%.lang: $(BUILDDIR)/%.lang
+
+BTMAKEFILECPPFLAGS += -I$(TOPDIR)/wrappers    -I$(BTMAKEPATH)/wrappers
+BTMAKEFILECFLAGS   += -I$(TOPDIR)/wrappers    -I$(BTMAKEPATH)/wrappers
+BTMAKEFILECXXFLAGS += -I$(TOPDIR)/wrappers    -I$(BTMAKEPATH)/wrappers
+BTMAKEFILELDFLAGS  += -L$(TOPDIR)/workarounds -L$(BTMAKEPATH)/workarounds
+
+-include /etc/btmakefile.config
+
+-include $(BTMAKEPATH)/Makefile.$(package).config.pre
+-include $(HOME)/.btmakefile/Makefile.config.pre
+-include $(HOME)/.btmakefile/Makefile.$(package).config.pre
+-include $(TOPDIR)/Makefile.Config
+-include $(BTMAKEPATH)/Makefile.$(package).config.post
+-include $(HOME)/.btmakefile/Makefile.config.post
+-include $(HOME)/.btmakefile/Makefile.$(package).config.post
+
+IGNORE := $(shell echo "BAILOUT=$(BAILOUT)" 2>&1)
+
+ifndef BAILOUT
+
+$(TOPDIR)/config.h: configure
+	$(TOPDIR)/configure
+
+ifdef TARGET
+   ifeq ($(HAVE_GNET),true)
+# DEBUG-GNET := $(shell echo "SRCS=$(SRCS)">&2)
+# DEBUG-GNET := $(shell echo "DEPS=$(DEPS)">&2)
+
+SRCS += $(SRCS-HAVE_GNET)
+BINS += $(BINS-HAVE_GNET)
+
+# INCS-HAVE_GNET = $(patsubst %.cc,%.ii,$(patsubst %.cpp,%.ii,$(patsubst %.c,%.i,$(filter %.c %.cc %.cpp,$(SRCS-HAVE_GNET)))))
+# ASMS-HAVE_GNET = $(patsubst %.ii,%.s,$(patsubst %.i,%.s,$(INCS-HAVE_GNET) $(filter %.i %.ii,$(SRCS-HAVE_GNET))))
+# OBJS-HAVE_GNET = $(addprefix $(BUILDDIR)/$(OBJPREFIX),$(patsubst %.s,%$(OBJSUFFIX),$(ASMS-HAVE_GNET) $(filter %.s,$(SRCS-HAVE_GNET))))
+#
+# BTMAKEFILE-LDFLAGS-$(BINS-HAVE_GNET) += $(BTMAKEFILE-GNET-LDFLAGS)
+# BTMAKEFILE-CFLAGS-$(OBJS-HAVE_GNET) += $(BTMAKEFILE-GNET-CFLAGS)
+
+# CFLAGS =  $(CFLAGS-GNET)
+# LDFLAGS = $(BTMAKEFILE-GNET-LDFLAGS)
+# FIXME: Add this for ANY other interesting variable
+   endif
+
+	ifeq ($(HAVE_LIBCAP),true)
+		SRCS += $(SRCS-HAVE_LIBCAP)
+		BINS += $(BINS-HAVE_LIBCAP)
+	endif
+
+DEPS   += $(addprefix $(BUILDDIR)/,$(addsuffix $(DEPSUFFIX),$(SRCS)))
+INCS   += $(patsubst %.cc,%.ii,$(patsubst %.cpp,%.ii,$(patsubst %.c,%.i,$(filter %.c %.cc %.cpp,$(SRCS)))))
+# INCS += $(filter %.i %.ii,$(patsubst %.cc,%.ii,$(patsubst %.cpp,%.ii,$(patsubst %.c,%.i,$(SRCS)))))
+ASMS   += $(patsubst %.ii,%.s,$(patsubst %.i,%.s,$(INCS) $(filter %.i %.ii,$(SRCS))))
+OBJS   += $(addprefix $(BUILDDIR)/$(OBJPREFIX),$(patsubst %.s,%$(OBJSUFFIX),$(ASMS) $(filter %.s,$(SRCS))))
+# OBJS += $(filter %.o %.oo,$(patsubst %.cc,%.oo,$(patsubst %.cpp,%.oo,$(patsubst %.c,%.o,$(SRCS)))))
+LANGS  += $(addprefix $(BUILDDIR)/,$(patsubst %.langsrc,%.lang,$(filter %.langsrc,$(SRCS))))
+
+# DEBUG-GNET := $(shell echo "SRCS=$(SRCS)">&2)
+# DEBUG-GNET := $(shell echo "DEPS=$(DEPS)">&2)
+
+   ifdef TARGETLC
+export TARGET
+export TARGETLC
+   
+      ifdef NOT_MAKING_CLEAN
+-include $(DEPS) dummy.d
+      endif
+
+# GLOBAL???FLAGS - Gilt für alle btmakefile-Projekte.
+# TARGET???FLAGS - Das "CONFIG" muß da eventuell noch raus - das was für dieses Target speziell ist (Makefile.Config.TARGET)
+# CONFIG???FLAGS - Für ein Projekt-Configure Skript ($(TOPDIR)/Makefile.Config)
+#  LOCAL???FLAGS - Aktuelle $(MAKEFILE)
+#       ???FLAGS - Benutzer z.B. beim Make-Aufruf oder via Environment
+
+# -MT $<.d 
+MKDEPFLAGS=-MD -MG -MP -MF $<.d
+
+REALCPPFLAGS = $(BTMAKEFILECPPFLAGS) $(GLOBALCPPFLAGS) $(TARGETCPPFLAGS) $(CONFIGCPPFLAGS) $(LOCALCPPFLAGS) $(CPPFLAGS) $(MKDEPFLAGS)
+REALCFLAGS   = $(BTMAKEFILECFLAGS)   $(GLOBALCFLAGS)   $(TARGETCFLAGS)   $(CONFIGCFLAGS)   $(LOCALCFLAGS)   $(CFLAGS)   $(REALCPPFLAGS)
+REALLDFLAGS  = $(BTMAKEFILELDFLAGS)  $(GLOBALLDFLAGS)  $(TARGETLDFLAGS)  $(CONFIGLDFLAGS)  $(LOCALLDFLAGS)  $(LDFLAGS)
+REALCXXFLAGS = $(BTMAKEFILECXXFLAGS) $(GLOBALCXXFLAGS) $(TARGETCXXFLAGS) $(CONFIGCXXFLAGS) $(LOCALCXXFLAGS) $(CXXFLAGS) $(REALCFLAGS)
+REALCCFLAGS  = $(BTMAKEFILECCFLAGS)  $(GLOBALCCFLAGS)  $(TARGETCCFLAGS)  $(CONFIGCCFLAGS)  $(LOCALCCFLAGS)  $(CCFLAGS)  $(REALCFLAGS)
+REALSOFLAGS  = $(BTMAKEFILESOFLAGS)  $(GLOBALSOFLAGS)  $(TARGETSOFLAGS)  $(CONFIGSOFLAGS)  $(LOCALSOFLAGS)  $(SOFLAGS)  $(REALCFLAGS) $(REALLDFLAGS)
+REALPIFLAGS  = $(BTMAKEFILEPIFLAGS)  $(GLOBALPIFLAGS)  $(TARGETPIFLAGS)  $(CONFIGPIFLAGS)  $(LOCALPIFLAGS)  $(PIFLAGS)  $(REALCFLAGS) $(REALLDFLAGS)
+REALDEFLAGS  = $(BTMAKEFILEDEFLAGS)  $(GLOBALDEFLAGS)  $(TARGETDEFLAGS)  $(CONFIGDEFLAGS)  $(LOCALDEFLAGS)  $(DEFLAGS)  $(REALCFLAGS) $(REALLDFLAGS)
+REALSEFLAGS  = $(BTMAKEFILESEFLAGS)  $(GLOBALSEFLAGS)  $(TARGETSEFLAGS)  $(CONFIGSEFLAGS)  $(LOCALSEFLAGS)  $(SEFLAGS)  $(REALCFLAGS) $(REALLDFLAGS)
+
+CPP = $(TARGETCPP) $(REALCPPFLAGS)
+CXS = $(TARGETCXS) $(REALCXXFLAGS)
+CS  = $(TARGETCS)  $(REALCCFLAGS)
+CXX = $(TARGETCXX) $(REALCXXFLAGS)
+CC  = $(TARGETCC)  $(REALCCFLAGS)
+SO  = $(TARGETSO)  $(REALSOFLAGS)
+PI  = $(TARGETPI)  $(REALPIFLAGS)
+DE  = $(TARGETDE)  $(REALDEFLAGS)
+#SE  = $(TARGETSE)  $(REALSEFLAGS)
+AR  = $(TARGETAR)  $(REALARFLAGS)
+
+   endif # ifdef TARGETLC
+endif # ifdef TARGET
+
+#for goal in all clean depclean dep
+#for arch in beos linux macosx win32
+#$goal-$arch:
+#	@$(MAKE) TARGET=$upcase{$arch} TARGETLC=$arch $goal
+
+all-beos:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=BEOS   TARGETLC=beos   all
+
+clean-beos:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=BEOS   TARGETLC=beos   clean
+
+depclean-beos:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=BEOS   TARGETLC=beos   depclean
+
+dep-beos:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=BEOS   TARGETLC=beos   dep
+
+install-beos:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=BEOS   TARGETLC=beos   install
+
+
+all-linux:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=LINUX  TARGETLC=linux  all
+
+clean-linux:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=LINUX  TARGETLC=linux  clean
+
+depclean-linux:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=LINUX  TARGETLC=linux  depclean
+
+dep-linux:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=LINUX  TARGETLC=linux  dep
+
+install-linux:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=LINUX  TARGETLC=linux install
+
+
+all-macosx:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=MACOSX TARGETLC=macosx all
+
+clean-macosx:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=MACOSX TARGETLC=macosx clean
+
+depclean-macosx:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=MACOSX TARGETLC=macosx depclean
+
+dep-macosx:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=MACOSX TARGETLC=macosx dep
+
+install-macosx:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=MACOSX TARGETLC=macosx install
+
+
+all-win32:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=WIN32  TARGETLC=win32  all
+
+clean-win32:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=WIN32  TARGETLC=win32  clean
+
+depclean-win32:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=WIN32  TARGETLC=win32  depclean
+
+dep-win32:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=WIN32  TARGETLC=win32  dep
+
+install-win32:
+	@$(MAKE) -f $(MAKEFILE) $(NPD) TARGET=WIN32  TARGETLC=win32  install
+
+
+ifndef BUILD_DYNAMIC
+BUILD_DYNAMIC = true
+endif
+
+ifndef BUILD_DYNAMIC_EXES
+BUILD_DYNAMIC_EXES = $(BUILD_DYNAMIC)
+endif
+
+ifndef BUILD_DYNAMIC_LIBS
+BUILD_DYNAMIC_LIBS = $(BUILD_DYNAMIC)
+endif
+
+ifndef BUILD_STATIC
+BUILD_STATIC = true
+endif
+
+ifndef BUILD_STATIC_EXES
+BUILD_STATIC_EXES = $(BUILD_STATIC)
+endif
+
+ifndef BUILD_STATIC_LIBS
+BUILD_STATIC_LIBS = $(BUILD_STATIC)
+endif
+
+################################################################################################
+
+#$(TOPDIR)/build-$(TARGETLC)/$(THISDIR)/$(OBJPREFIX)%.$(OBJSUFFIX): %.cpp
+#	-@
+#	$(CXX) $(REALCXXFLAGS) $(REALCPPFLAGS) $< -o $@
+
+#$(TOPDIR)/build-$(TARGETLC)/$(THISDIR)/%.$(OBJSUFFIX): %.c
+#	@mkdir -p $(TOPDIR)/build-$(TARGETLC)/$(THISDIR)
+#	$(CC) $(REALCCFLAGS) $(REALCPPFLAGS) $< -o $@
+
+################################################################################################
+
+ifndef INCLANG
+INCLANG=none
+endif
+
+version_major := $(shell echo "`cat $(TOPDIR)/.major 2>/dev/null || echo 0`")
+version_minor := $(shell echo "`cat $(TOPDIR)/.minor 2>/dev/null || echo 0`")
+version_patch := $(shell echo "`cat $(TOPDIR)/.patch 2>/dev/null || echo 0`")
+
+major_version :=                  $(version_major)
+minor_version := $(major_version).$(version_minor)
+version       := $(minor_version).$(version_patch)
+
+#We must differ between linking via gcc and linking directly via ld.
+# -- really?
+GCCLDFLAGS += $(LDFLAGS)
+
+ifeq ($(HAVE_ANSI_COLORS),true)
+DEFAULTCOLOR  =\033[0;40;37;22m
+ ACTIONCOLOR   =\033[0;40;37;2m
+ ATTENTIONCOLOR=\033[0;40;31;22m
+  FAILEDCOLOR   =
+  WARNINGCOLOR  =\033[0;40;33;22m
+  NOTICEGCOLOR  =\033[0;40;33;2m
+ WELLCOLOR     =\033[0;40;32;22m
+ OUTPUTCOLOR   =\033[0;40;33;1m
+ INPUTCOLOR    =\033[0;40;34;1m
+ FLAGCOLOR     =\033[0;40;37;1m
+endif
+
+#
+# The language library contains the language compiler lc. Because it will use
+# it from it's own directory, the symbol LC my be defined already. Only define
+# it here, if it isn't defined already
+#
+ifndef LC
+  LC=lc
+endif
+
+#
+# Filenames for pattern rules
+#
+
+ifndef STDERROR
+  STDERROR = Makefile.stderr
+endif
+
+ifndef package
+package=unknown
+endif
+
+ifndef copyrightyears
+copyrightyears=`date +%Y`
+endif
+
+ifndef mainauthor
+mainauthor=Unknown
+endif
+
+export package copyrightyears mainauthor
+
+ifdef TARGET
+
+MAKE := $(MAKE) TARGET=$(TARGET) TARGETLC=$(TARGETLC)
+
+# §-§PATTERNRULE§%§%$(DEPSUFFIX)§Makeing dependency rules for§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $(CFLAGS-$@) $(CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o /dev/null§§
+
+#§-§PATTERNRULE§%.c  §%.c$(DEPSUFFIX)  §Makeing dependency rules for§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null§§
+#§-§PATTERNRULE§%.cpp§%.cpp$(DEPSUFFIX)§Makeing dependency rules for§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null§§
+#§-§PATTERNRULE§%.cc §%.cc$(DEPSUFFIX) §Makeing dependency rules for§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null§§
+
+#
+# Object pattern rules
+#
+
+§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.i  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.ii §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.c  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.cpp§%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.cc §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+
+#
+# Assembler pattern rules
+#
+
+§§PATTERNRULE§%.i  §%.s§Generating assembler output from§$<§$(CS)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.ii §%.s§Generating assembler output from§$<§$(CXS) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.c  §%.s§Generating assembler output from§$<§$(CS)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.cpp§%.s§Generating assembler output from§$<§$(CXS) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.cc §%.s§Generating assembler output from§$<§$(CXS) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+
+#
+# Generare Preprocessed files:
+#
+
+# $(CC) $(CFLAGS) -E -P $< -o $@
+§§PATTERNRULE§%.c  §%.i §Preprocessing§$<§$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~§§
+§§PATTERNRULE§%.cpp§%.ii§Preprocessing§$<§$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~§§
+§§PATTERNRULE§%.cc §%.ii§Preprocessing§$<§$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~§§
+
+#
+# For my language concept (currently needed only by the package language, but
+# that may change WITHOUT updating this sentence of this file!!!)
+#
+
+§§PATTERNRULE§%.langsrc§%.lang:§Compiling§$<§$(CPP) -x c -P $< | $(LC) $(LCFLAGS) -o $@§§
+
+# ifdef BIN
+# ifndef BINOBJS
+# BINOBJS=$(OBJS)
+# endif
+# $(BIN): $(BINOBJS)
+# endif
+# 
+# §-§PATTERNRULE§ §$(BIN) $(BINS)§Linking§$(CXX) $(GCCLDFLAGS) $(GCCLDFLAGS-$@) $^ -o $@§-§
+
+ifdef DEBUG
+DEBUG := $(shell echo "BIN=$(BIN)" >&2)
+DEBUG := $(shell echo "BINS=$(BINS)" >&2)
+DEBUG := $(shell echo "OBJS=$(OBJS)" >&2)
+DEBUG := $(shell echo "BINOBJS=$(BINOBJS)" >&2)
+DEBUG := $(shell echo "SEOBJS=$(SEOBJS)" >&2)
+DEBUG := $(shell echo "SETARGET=$(SETARGET)" >&2)
+DEBUG := $(shell echo "SETARGETS=$(SETARGETS)" >&2)
+DEBUG := $(shell echo "DEOBJS=$(DEOBJS)" >&2)
+DEBUG := $(shell echo "DETARGET=$(DETARGET)" >&2)
+DEBUG := $(shell echo "DETARGETS=$(DETARGETS)" >&2)
+DEBUG := $(shell echo "BUILD_DEFAULT=$(BUILD_DEFAULT)" >&2)
+DEBUG := $(shell echo "BUILD_STATIC_EXES=$(BUILD_STATIC_EXES)" >&2)
+DEBUG := $(shell echo "BUILD_DYNAMIC_EXES=$(BUILD_DYNAMIC_EXES)" >&2)
+#DEBUG := $(shell echo "=$()" >&2)
+#DEBUG := $(shell echo "=$()" >&2)
+#DEBUG := $(shell echo "=$()" >&2)
+DEBUG := true
+endif
+
+ifdef BIN
+#BINS += $(BIN)
+
+   ifndef BINOBJS
+BINOBJS = $(OBJS)
+   endif
+endif
+
+ifeq ($(BUILD_STATIC_EXES),true)
+   ifeq ($(BUILD_DEFAULT),static)
+SETARGETS = $(addprefix $(SEPREFIX),$(addsuffix $(SESUFFIX),$(BINS)))
+   else
+SETARGETS = $(addprefix $(SEPREFIX),$(addsuffix $(SEOPTFIX)$(SESUFFIX),$(BINS)))
+   endif
+   
+   ifdef BIN
+      ifndef SETARGET
+         ifeq ($(BUILD_DEFAULT),static)
+SETARGET = $(SEPREFIX)$(BIN)$(SESUFFIX)
+         else
+SETARGET = $(SEPREFIX)$(BIN)$(SEOPTFIX)$(SESUFFIX)
+         endif
+      endif
+   
+      ifndef SEOBJS
+SEOBJS = $(BINOBJS)
+      endif
+   endif
+
+   ifdef DEBUG
+DEBUG := $(shell echo "BIN=$(BIN)" >&2)
+DEBUG := $(shell echo "BINS=$(BINS)" >&2)
+DEBUG := $(shell echo "OBJS=$(OBJS)" >&2)
+DEBUG := $(shell echo "BINOBJS=$(BINOBJS)" >&2)
+DEBUG := $(shell echo "SEOBJS=$(SEOBJS)" >&2)
+DEBUG := $(shell echo "SETARGET=$(SETARGET)" >&2)
+DEBUG := $(shell echo "SETARGETS=$(SETARGETS)" >&2)
+DEBUG := true
+   endif
+
+#
+# This is the executable generation rule ONLY FOR ***STATIC*** executables.
+#
+§§PATTERNRULE§ §$(SETARGETS) $(SETARGET)§Linking (creating static executable)§$^§$(TARGETSE) -Wl,-\( $(REALSEFLAGS) $(SEFLAGS-$@) $(LDFLAGS-$@) $(BTMAKEFILE-LDFLAGS-$@) $(BTMAKEFILE-SEFLAGS-$@) $^ -Wl,-\) -o $@§§
+
+$(SETARGET): $(SEOBJS)
+$(ALL): $(SETARGETS)
+endif # ifeq ($(BUILD_STATIC_EXES),true)
+
+ifeq ($(BUILD_DYNAMIC_EXES),true)
+   ifeq ($(BUILD_DEFAULT),dynamic)
+DETARGETS = $(addprefix $(DEPREFIX),$(addsuffix $(DESUFFIX),$(BINS)))
+   else
+DETARGETS = $(addprefix $(DEPREFIX),$(addsuffix $(DEOPTFIX)$(DESUFFIX),$(BINS)))
+   endif
+   
+   ifdef BIN
+      ifndef DETARGET
+         ifeq ($(BUILD_DEFAULT),dynamic)
+DETARGET = $(DEPREFIX)$(BIN)$(DESUFFIX)
+         else
+DETARGET = $(DEPREFIX)$(BIN)$(DEOPTFIX)$(DESUFFIX)
+         endif
+      endif
+   
+      ifndef DEOBJS
+DEOBJS = $(BINOBJS)
+      endif
+   endif
+
+   ifdef DEBUG
+DEBUG := $(shell echo "BIN=$(BIN)" >&2)
+DEBUG := $(shell echo "BINS=$(BINS)" >&2)
+DEBUG := $(shell echo "OBJS=$(OBJS)" >&2)
+DEBUG := $(shell echo "BINOBJS=$(BINOBJS)" >&2)
+DEBUG := $(shell echo "DEOBJS=$(DEOBJS)" >&2)
+DEBUG := $(shell echo "DETARGET=$(DETARGET)" >&2)
+DEBUG := $(shell echo "DETARGETS=$(DETARGETS)" >&2)
+DEBUG := true
+   endif
+
+#
+# This is the executable generation rule ONLY FOR ***DYNAMIC*** executables.
+#
+§§PATTERNRULE§ §$(DETARGETS) $(DETARGET)§Linking (creating dynamic executable)§$^§$(TARGETDE) -Wl,-\( $(REALDEFLAGS) $(DEFLAGS-$@) $(LDFLAGS-$@) $(BTMAKEFILE-LDFLAGS-$@) $(BTMAKEFILE-DEFLAGS-$@) $^ -Wl,-\) -o $@§§
+
+$(DETARGET): $(DEOBJS)
+$(ALL): $(DETARGETS)
+endif # ifeq ($(BUILD_DYNAMIC_EXES),true)
+
+ifdef LIBTARGET
+ifndef LIBOBJS
+LIBOBJS = $(OBJS)
+endif
+ifndef ARTARGET
+ARTARGET = $(ARPREFIX)$(LIBTARGET)$(ARSUFFIX)
+ifndef AROBJS
+AROBJS = $(LIBOBJS)
+endif
+endif
+ifndef SOTARGET
+SOTARGET = $(SOPREFIX)$(LIBTARGET)$(SOSUFFIX)
+ifndef SOOBJS
+SOOBJS = $(LIBOBJS)
+endif
+endif
+endif
+
+ifdef BUILD_STATIC_LIBS
+
+ifdef ARTARGET
+ARTARGETS += $(ARTARGET)
+ifndef AROBJS
+AROBJS = $(OBJS)
+endif
+$(ARTARGET): $(AROBJS)
+endif
+
+$(ALL): $(ARTARGETS)
+
+§§PATTERNRULE§ §$(ARTARGETS)§Archivating (creating static library)§$^§$(AR) rs $@ $^§§
+
+ifdef DEBUG
+DEBUG := $(shell echo ARTARGETS=$(ARTARGETS) >&2)
+endif
+
+endif
+
+ifdef BUILD_DYNAMIC_LIBS
+
+ifdef SOTARGET
+SOTARGETS += $(SOTARGET)
+ifndef SOOBJS
+SOOBJS = $(OBJS)
+endif
+$(SOTARGET): $(SOOBJS)
+endif
+
+$(ALL): $(SOTARGETS)
+
+§§PATTERNRULE§ §$(SOTARGETS)§Linking (creating dynamic library)§$^§$(SO) $^ -o $@ -L$(BUILDDIR) $(REALSOFLAGS) $(SOFLAGS-$@) $(BTMAKEFILE-SOFLAGS-$@)§§
+ifdef DEBUG
+DEBUG := $(shell echo SOTARGETS=$(SOTARGETS) >&2)
+endif
+endif
+
+ifdef PITARGET
+PITARGETS += $(PITARGET)
+ifndef PIOBJS
+PIOBJS = $(OBJS)
+endif
+$(PITARGET): $(PIOBJS)
+
+$(ALL): $(PITARGET)
+endif
+
+§§PATTERNRULE§ §$(PITARGETS)§Linking (creating runtime link library aka plugin)§$^§$(PI) $^ -o $@ -L$(BUILDDIR) $(REALPIFLAGS) $(PIFLAGS-$@) $(BTMAKEFILE-PIFLAGS-$@)§§
+
+print-copyright:
+	@$(SHELL) -ec '( cat $(TOPDIR)/COPYRIGHT 2>/dev/null || cat $(BTMAKEPATH)/COPYRIGHT ) | sed '\''s;$$(package);$(package);g'\'' | sed '\''s;$$(copyrightyears);$(copyrightyears);g'\'' | sed '\''s;$$(mainauthor);$(mainauthor);g'\'
+
+FORCE:
+	$(NOP)
+
+# ifndef BAILOUT
+# ifeq ($(THISDIR),.)
+# ifneq ($(MAKECMDGOALS),version.o)
+# IGNORE:=$(shell make version.o || touch version.o)
+# endif
+# endif
+# endif
+
+#
+# make dep
+#
+
+btmake-dep-pre: $(DEPS)
+	$(NOP)
+
+@RECURSIVE-dep@
+
+btmake-dep-post: FORCE
+	$(NOP)
+
+#
+# make all
+#
+
+ifeq ($(TOPDIR),.)
+btmake-all-pre: version.o
+endif
+
+btmake-all-pre: FORCE
+	$(NOP)
+
+@RECURSIVE-all@
+
+btmake-all-post: $(BIN) $(BINS) $(LANGS) $(ARTARGETS) $(SOTARGETS) $(PITARGETS)
+ifeq ($(MAKELEVEL),1)
+	@$(MAKE) -f $(MAKEFILE) $(NPD) print-copyright
+endif
+	$(NOP)
+
+#
+# make depclean
+#
+
+btmake-depclean-pre: FORCE
+	$(NOP)
+ifeq ($(MAKELEVEL),1)
+	@echo "Making depclean ..."
+endif
+
+@RECURSIVE-depclean@
+
+btmake-depclean-post: FORCE
+	@touch BTMAKEFILE_nothing && $(RM) -f -- BTMAKEFILE_nothing $(DEPS)
+
+#
+# make clean
+#
+
+btmake-clean-pre: FORCE
+	$(NOP)
+ifeq ($(MAKELEVEL),1)
+	@echo "Making clean ..."
+	@$(MAKE) -f $(MAKEFILE) $(NPD) depclean
+endif
+
+@RECURSIVE-clean@
+
+btmake-clean-post: FORCE
+	@$(RM) -f -- version.c $(BIN) $(BINS)
+	@$(RM) -f -- version.h $(CLEANFILES) $(STDERROR) $(ASMS)
+	@$(RM) -f -- version.o $(OBJS) $(LANGS) .kdbgrc.*
+	@$(RM) -f -- version.c.d config.h $(INCS) $(SOTARGET) $(ARTARGET)
+#	@$(RM) -fr $(TOPDIR)/build-*
+
+#
+# make install
+#
+
+ifeq ($(THISDIR),.)
+btmake-install-pre: all-$(TARGETLC)
+else
+btmake-install-pre:
+endif
+	$(NOP)
+
+@RECURSIVE-install@
+
+btmake-install-post:
+ifeq ($(MAKELEVEL),1)
+	@$(MAKE) -f $(MAKEFILE) $(NPD) print-copyright
+else
+	$(NOP)
+endif
+
+#
+# make uninstall
+#
+
+btmake-uninstall-pre:
+
+@RECURSIVE-uninstall@
+
+btmake-uninstall-post:
+
+endif # ifdef TARGET
+
+#
+# make help
+#
+
+help:
+	@echo "BtMakeFile driven compilation."
+	@echo ""
+	@echo "User targets:"
+	@echo ""
+	@echo "       make all       creates the executables and other files."
+	@echo "       make install   copies the executables and other files in their"
+	@echo "                      destination directorys. (Calls make all)"
+	@echo "       make clean     Deletes all recreateable files like *.o"
+	@echo "       make version   Prints version of package."
+	@echo ""
+	@echo "Developer targets:"
+	@echo ""
+#	@echo "       make dep       (optional) created only the .d files."
+	@echo "       make depclean  Deletes only dependency files (*.d)"
+ifdef MAINBIN
+	@echo "       make valgrind  creates the executables and start $(MAINBIN) via"
+	@echo "                      valgrind."
+endif
+	@echo "     * make smi       shows missing include files"
+	@echo ""
+	@echo "Help message targes:"
+	@echo ""
+	@echo "       make help_X    shows more verbose help for the target X "
+	@echo "                      Targets marked with an asterisk have such an "
+	@echo "                      extra help entry"
+
+help_smi:
+	@echo "make smi - Show Missing Includes"
+	@echo ""
+	@echo "Does nearly the same as make all, but reports error in form of a list "
+	@echo "of guessed missing includes instead of the plain error messages from gcc"
+
+#
+# make smi - show missing include(file)s
+#
+
+smi:
+	$(BTMAKEPATH)/smi
+
+#
+# make valgrind
+#
+
+valgrind: all
+	valgrind -v --logfile-fd=4 --leak-check=yes --show-reachable=yes ./$(MAINBIN) 4>$(MAINBIN).valgrind 3>$(MAINBIN).stddbg >$(MAINBIN).stdout
+
+#
+# make version
+#
+
+version:
+	@echo "$(version)"
+
+#
+# default rules
+#
+
+real-dep: FORCE
+real-all: FORCE
+real-install: FORCE
+real-depclean: FORCE
+real-clean: FORCE
+real-uninstall: FORCE
+
+include $(BTMAKEPATH)/Makefile.VersionControl
+
+endif # ifndef BAILOUT

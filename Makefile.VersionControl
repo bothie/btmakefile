@@ -1,0 +1,147 @@
+################################################################################
+#                                                                              #
+#                                                                              #
+#            V E R S I O N  -  C O N T R O L   V e r s i o n  1 . x            #
+#                                                                              #
+#                    Copyright (C) 2001-2007 by Bodo Thiesen                   #
+#                                                                              #
+#                                                                              #
+################################################################################
+#
+# Version Control for make. Copyright (C) 2001 by Bodo Thiesen
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc., 675 Mass
+# Ave, Cambridge, MA 02139, USA.
+#
+################################################################################
+#
+# Dear hackers!
+#
+# Do you want better version information about Makefile.VersionControl? Take a
+# look at the modification time-stamp. That is the only available version
+# information in the moment. Because I am very forgetful, I cannot make sure,
+# that everytime, I change this file, I update the version information what I
+# don't offer because of this.
+#
+#     Please forgive me, Bodo.
+#
+################################################################################
+#
+# This file is intended to be included as the last step in a make file (after
+# the own rules ...). It provides the following rules (only thought for the
+# maintainer of a package):
+#
+#  init-version            If you start a project, use this before you release
+#                          the first version of the project. Then DON'T USE IT
+#                          ANYMORE!
+#  patch                   Creates a tar.gz archiv and a compressed .diff file.
+#                          The names look like 'dist' but without the .d part.
+#                          the extensions are '.tar.gz' as above for the new
+#                          tar archive and '.diff.gz' for the patch. The latter
+#                          file will be omitted, if this is the first patch
+#                          (a=b=1 && c=0) of this project
+#  minor                   Increases the minor, resets the patch version to 0
+#                          and calls 'make patch'
+#  major                   Increases the major, resets minor and patch version
+#                          to 0 (both) and calls 'make patch'
+#
+# Used files:
+#
+#  .major:         Holds the current major version
+#  .minor:         Holds the current minor version
+#  .patch:         Holds the current patch version
+#
+# If your program should include a message like '$(package) Verstion a.b.c[.d]'
+# you should link version.o together to your executables, and include version.h
+# in every program where neccessary.
+#
+# Note: The file version.h will be created once, the file version.c on every
+#       compilation. So: DON'T include 'version.c' even, if you want to write
+#       some programs, which are only consisting of one sourcefile.
+#
+# The following variables will be available:
+#
+# const int   major_version;     // the calue a
+# const int   minor_version;     // the calue b
+# const int   patch_version;     // the calue c
+# const char* version_string;    // in the form "a.b.c"
+# const char* program_name;      // in the form "projectname"
+
+.PHONY: version-control-clean init-version dist patch minor major
+
+version-control-clean: clean
+	rm -f version.h version.c version.o
+
+version.o: version.c version.h
+
+version.c: .major .minor .patch
+	@echo "Update version ..."
+	@rm -f .ver
+	@echo "/* Automatic generated file. DON'T CHANGE! */" >> .ver
+	@echo "const int   major_version    =$(version_major);" >> .ver
+	@echo "const int   minor_version    =$(version_minor);" >> .ver
+	@echo "const int   patch_version    =$(version_patch);" >> .ver
+	@echo "const char* version_string   =\"$(version)\";" >> .ver
+	@echo "const char* program_name     =\"$(package)\";" >> .ver
+	@mv .ver version.c
+
+version.h: ;
+	@rm -f .ver
+	@echo "/* Automatic generated file. DON'T CHANGE! */" >> .ver
+	@echo "#ifndef VERSION_H"                             >> .ver
+	@echo "#define VERSION_H"                             >> .ver
+	@echo "#ifdef _cplusplus"                             >> .ver
+	@echo "#define _cdecl \"C\""                          >> .ver
+	@echo "#else"                                         >> .ver
+	@echo "#define _cdecl"                                >> .ver
+	@echo "#endif"                                        >> .ver
+	@echo "extern _cdecl const int   major_version;"      >> .ver
+	@echo "extern _cdecl const int   minor_version;"      >> .ver
+	@echo "extern _cdecl const int   patch_version;"      >> .ver
+	@echo "extern _cdecl const char* version_string;"     >> .ver
+	@echo "extern _cdecl const char* program_name;"       >> .ver
+	@echo "#define PROGRAMNAME \"$(package)\""            >> .ver
+	@echo "#endif /* #ifndef VERSION_H */"                >> .ver
+	@mv .ver version.h
+
+init-version:
+	echo "0" > .major
+	echo "0" > .minor
+	echo "0" > .patch
+	$(MAKE) --no-print-directory version.h
+
+patch: version-control-clean
+	@$(shell btmakefile --path)/MakeVersionControl patch
+
+minor: version-control-clean
+	@$(shell btmakefile --path)/MakeVersionControl minor
+
+major: version-control-clean
+	@$(shell btmakefile --path)/MakeVersionControl major
+
+test-patch: patch-test
+patch-test: version-control-clean
+	@$(shell btmakefile --path)/MakeVersionControl --test patch
+
+test-minor: minor-test
+minor-test: version-control-clean
+	@$(shell btmakefile --path)/MakeVersionControl --test minor
+
+test-major: major-test
+major-test: version-control-clean
+	@$(shell btmakefile --path)/MakeVersionControl --test major
+
+#$(package)
+#$(copyrightyears)
+#$(mainauthor)

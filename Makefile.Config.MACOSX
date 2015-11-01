@@ -1,0 +1,45 @@
+TARGETCPP           = $(MACOSXTOOLSPREFIX)cpp
+TARGETCXX           = $(MACOSXTOOLSPREFIX)c++ -c
+TARGETCC            = $(MACOSXTOOLSPREFIX)cc  -c
+TARGETSO            = $(MACOSXTOOLSPREFIX)c++ -dylib
+TARGETPI            = $(MACOSXTOOLSPREFIX)c++ -shared
+TARGETDE            = $(MACOSXTOOLSPREFIX)c++
+TARGETSE            = $(MACOSXTOOLSPREFIX)c++ -static
+TARGETAR            = $(MACOSXTOOLSPREFIX)ar
+
+TARGETCPPFLAGS      = -D$(TARGET)
+TARGETCXXFLAGS      = -fPIC
+TARGETCCFLAGS       = -fPIC
+TARGETSOFLAGS       = -fPIC
+TARGETPIFLAGS       = -fPIC
+TARGETDEFLAGS       = -fPIC
+TARGETSEFLAGS       = -fPIC
+TARGETARFLAGS       = 
+
+# FIXME: Do we really -lm need this everytime?
+TARGETLDFLAGS += -lm
+
+ifdef NEED_NETWORK
+# TARGETLDFLAGS += /* nothing */
+endif
+
+ifdef NEED_RUNTIME_LINKER
+TARGETLDFLAGS += -ldl
+endif
+
+ARPREFIX            = lib
+ARSUFFIX            = .a
+DEPPREFIX           = 
+DEPSUFFIX           = .d
+DEPREFIX            = 
+DEOPTFIX            = -dynamic
+DESUFFIX            = 
+SEPREFIX            = 
+SEOPTFIX            = -static
+SESUFFIX            = 
+OBJPREFIX           = 
+OBJSUFFIX           = .o
+PIPREFIX            = lib
+PISUFFIX            = .so
+SOPREFIX            = lib
+SOSUFFIX            = .so

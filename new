@@ -1,0 +1,158 @@
+#!/bin/sh
+
+echo "This script would no longer work properly" >&2
+
+exit 2
+
+#
+# Script new, Copyright (C) 2001-2007 by Bodo Thiesen <bothie@gmx.de>
+#
+# This program is free software; you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the Free Software
+# Foundation; either version 2 of the License, or (at your option) any later
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+# details.
+#
+# You should have received a copy of the GNU General Public License along with
+# this program; if not, write to the Free Software Foundation, Inc., 675 Mass
+# Ave, Cambridge, MA 02139, USA.
+#
+###############################################################################
+#
+# This script creates a new project using my Version Control Concept
+#
+# To use this script, copy (or hardlink) it to the parent directory of the
+# directory where you installed the package where this file was included (the
+# language library, the bothie-utils or wharever else).
+#
+# ATTENTION: Changing of all files in the new project affect the same named
+#            files in the old directory, because they were hardlinked to the
+#            new position. If you don't want this, change the command ln near
+#            the beginning of this file (after the comments to cp.
+#
+# Example: If you have installed the sources of the package (say bothie-utils)
+#          to /home/yourname/src, then there is a directory called
+#          bothie-utils-a.b.c! Move the file
+#          /home/yourname/src/bothie-utils-a.b.c/new to /home/yourname/src
+#          Set the variable sourcepackage below to 'bothie-utils-a.b.c' (where
+#          you must replace the a, b and c by your version number of your
+#          package. If you renamed the directory 'bothie-utils-a.b.c' to
+#          'bothie-utils' (recommended, if you want to patch or change the
+#          sources), you must set the variable sourcepackage to the new name,
+#          'bothie-utils'.
+#
+#          Here the line for 'bothie-utils-a.b.c':
+#
+#              sourcepackage=bothie-utils-a.b.c
+#
+#          Maybe for example
+#
+#              sourcepackage=bothie-utils-1.1.5
+#
+sourcepackage=bothie-utils
+
+# Change that according to your person
+mainauthorname="Bodo Thiesen"
+mainauthormail="bothie@gmx.de"
+
+# Stop changeing here anything (except for bugfixing, of course)
+
+if ! test -d "$sourcepackage"; then
+	echo "Please set the variable sourcepackage into this script before"
+	echo "using it. (Look at the comment in this file)"
+	exit 1;
+fi
+if test -e $1; then
+	echo "Directory entry $1 is already existing. Aborting ..."
+	exit 2;
+fi
+mkdir $1
+# If you don't want to get the files hardlined, exchange the ln by cp:
+ln $sourcepackage/COPYING $sourcepackage/MakeVersionControl \
+   $sourcepackage/Makefile.Include $sourcepackage/Makefile.VersionControl \
+   $sourcepackage/Makefile.VersionControl.txt $sourcepackage/COPYRIGHT \
+   $sourcepackage/VersionControl.test $sourcepackage/new $sourcepackage/smi \
+   $sourcepackage/script.sed $1
+# This must be copied independend of the files before!
+cp $sourcepackage/AUTHORS $1
+echo "" > $1/BUGS
+echo "" > $1/TODO
+export LANG=en
+date +"%a %b %d %T %Z %Y: Start of project" >> $1/ChangeLog
+cd $1
+
+y=`date +%Y`
+
+echo "#$1, Copyright (C) $y by $mainauthorname" >> Makefile
+echo "#The package $1 comes with ABSOLUTELY NO WARRANTY; for" >> Makefile
+echo "#details, see COPYING in the source tree of the sources." >> Makefile
+echo "#This is free software, and you are welcome to " >> Makefile
+echo "#redistribute it under certain conditions; see the file" >> Makefile
+echo "#COPYING in the source tree of the sources for details." >> Makefile
+echo "" >> Makefile
+echo "SRC = $1.c" >> Makefile
+echo "BIN = $1" >> Makefile
+echo "DIRS = " >> Makefile
+echo "" >> Makefile
+echo "include Makefile.Include" >> Makefile
+echo "" >> Makefile
+echo "LDFLAGS+=-lm" >> Makefile
+echo "" >> Makefile
+echo "$1: $1.o version.o" >> Makefile
+echo "" >> Makefile
+echo "real-install: ;" >> Makefile
+echo "	@echo \"Installing:\"" >> Makefile
+echo "	@for i in \$(BIN); do \\" >> Makefile
+echo "		cp \$\$i $(prefix)/bin/; \\" >> Makefile
+echo "		chown root:root $(prefix)/bin/\$\$i; \\" >> Makefile
+echo "		chmod 755 $(prefix)/bin/\$\$i; \\" >> Makefile
+echo "		strip $(prefix)/bin/\$\$i; \\" >> Makefile
+echo "	done" >> Makefile
+echo "" >> Makefile
+echo "real-clean: ;" >> Makefile
+echo "	@rm -fR man/gz" >> Makefile
+echo "" >> Makefile
+echo "################################################################################" >> Makefile
+echo "#                                                                              #" >> Makefile
+echo "#                                                                              #" >> Makefile
+echo "#                       V E R S I O N  --  C O N T R O L                       #" >> Makefile
+echo "#                                                                              #" >> Makefile
+echo "#                    Copyright (C) 2001-2007 by Bodo Thiesen                   #" >> Makefile
+echo "#                                                                              #" >> Makefile
+echo "#                                                                              #" >> Makefile
+echo "################################################################################" >> Makefile
+echo "" >> Makefile
+echo "#" >> Makefile
+echo "# Set this variables to your necessities" >> Makefile
+echo "#" >> Makefile
+echo "" >> Makefile
+echo "package        = $1" >> Makefile
+echo "copyrightyears = $y" >> Makefile
+echo "mainauthor     = $mainauthorname <$mainauthormail>" >> Makefile
+echo "" >> Makefile
+echo "#" >> Makefile
+echo "# Now let's include the VersionControl" >> Makefile
+echo "#" >> Makefile
+echo "" >> Makefile
+echo "include Makefile.VersionControl" >> Makefile
+echo "" >> Makefile
+
+echo "#include \"version.h\"" >> $1.c
+echo "" >> $1.c
+echo "#include <stdio.h>" >> $1.c
+echo "" >> $1.c
+echo "int main(int argc,char * argv[]) {" >> $1.c
+echo "	printf(" >> $1.c
+echo "		\"%s, Version %s, Copyright (C) $y by $mainauthorname\n\n\"," >> $1.c
+echo "		program_name,version_string" >> $1.c
+echo "	);" >> $1.c
+echo "	return 0;" >> $1.c
+echo "}" >> $1.c
+
+make init-version
+cd ..
+exit 0

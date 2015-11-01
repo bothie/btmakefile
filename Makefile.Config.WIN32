@@ -1,0 +1,45 @@
+TARGETCPP           = $(WIN32TOOLSPREFIX)cpp
+TARGETCXX           = $(WIN32TOOLSPREFIX)c++ -c
+TARGETCC            = $(WIN32TOOLSPREFIX)cc  -c
+TARGETSO            = $(WIN32TOOLSPREFIX)c++ -shared
+TARGETPI            = $(WIN32TOOLSPREFIX)c++ -shared
+TARGETDE            = $(WIN32TOOLSPREFIX)c++
+TARGETSE            = $(WIN32TOOLSPREFIX)c++ -static
+TARGETAR            = $(WIN32TOOLSPREFIX)ar
+
+TARGETCPPFLAGS      = -D$(TARGET)
+TARGETCXXFLAGS      = -fPIC
+TARGETCCFLAGS       = -fPIC
+TARGETSOFLAGS       = -fPIC
+TARGETPIFLAGS       = -fPIC
+TARGETDEFLAGS       = -fPIC
+TARGETSEFLAGS       = -fPIC
+TARGETARFLAGS       = 
+
+# FIXME: What about Cygwin?
+TARGETLDFLAGS += -lmingwex
+
+ifdef NEED_NETWORK
+TARGETLDFLAGS += -lwsock32
+endif
+
+ifdef NEED_RUNTIME_LINKER
+# TARGETLDFLAGS += /* nothing */
+endif
+
+ARPREFIX            = 
+ARSUFFIX            = .lib
+DEPPREFIX           = 
+DEPSUFFIX           = .dep
+DEPREFIX            = 
+DEOPTFIX            = -dynamic
+DESUFFIX            = .exe
+SEPREFIX            = 
+SEOPTFIX            = -static
+SESUFFIX            = .exe
+OBJPREFIX           = 
+OBJSUFFIX           = .obj
+PIPREFIX            = 
+PISUFFIX            = .dll
+SOPREFIX            = 
+SOSUFFIX            = .dll

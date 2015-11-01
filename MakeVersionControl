@@ -1,0 +1,213 @@
+#!/bin/sh
+
+# Freie Fehlernummern 39, 40
+# Erste freie Fehlernummer: 50
+
+# Configuration:
+#
+# ???
+ignore_binaries=true
+
+if test "$1" == "--test"
+then
+	TESTING=true
+	shift
+else
+	TESTING=false
+fi
+
+if $TESTING
+then
+	# Directory where to put the (compressed) .tar files
+	ARCHIVE=archive.test
+	
+	# Directory where to search and put to the -src and -cvs directories for the previous version.
+	TEMP=.version-control.test
+else
+	# Directory where to put the (compressed) .tar files
+	ARCHIVE=archive
+	
+	# Directory where to search and put to the -src and -cvs directories for the previous version.
+	TEMP=.version-control
+fi
+
+#
+# Note: I use some 'sync's to make this action something crash-stable. But if
+#       the computer crashes you might still be needed to 'repair' something so
+#       that this all will work again. (But there should not be any risk of
+#       data loosing at all - that is the reason for the many 'sync's ...)
+#
+
+if ! test -x "$(type -p bestzip)"
+then
+	echo "You have to install the package bothie-utils to use this feature. Sorry." >&2
+	exit 29
+fi
+
+action="$1"
+
+prev_major="$(cat .major)"
+prev_minor="$(cat .minor)"
+prev_patch="$(cat .patch)"
+prev_version="$prev_major.$prev_minor.$prev_patch"
+
+case "$action" in
+	major)
+		major=$(($prev_major+1))
+		minor=0
+		patch=0
+		;;
+	
+	minor)
+		major=$prev_major
+		minor=$(($prev_minor+1))
+		patch=0
+		;;
+	
+	patch)
+		major=$prev_major
+		minor=$prev_minor
+		patch=$(($prev_patch+1))
+		;;
+	
+	*)
+		echo "Unkown action. Valid actions are major, minor and patch"
+		exit 30
+		;;
+esac
+
+version="$major.$minor.$patch"
+
+if test $(grep "^package *= *" Makefile | wc -l) != 1
+then
+	echo "Couldn't determine package name [1]"
+	exit 31
+fi
+
+package="$(grep "^package *= *" Makefile | sed -e 's/^package *= *//')"
+
+if test $(ls -id . ../$package | wc -l) != 2
+then
+	echo "Couldn't determine package name [2]"
+	exit 32
+fi
+
+ls -id . ../$package | (
+	read inode1 name1
+	read inode2 name2
+	
+	if test "$inode1" != "$inode2"
+	then
+		echo "Couldn't determine package name [3]"
+		exit 33
+	fi
+	
+	exit 0
+) || exit 34
+
+if $TESTING
+then
+	rm -fr \
+		"../$TEMP/$package-$version-src/" \
+		"../$TEMP/$package-$version-cvs" \
+		"../$ARCHIVE/$package-$version-src.tar"* \
+		"../$ARCHIVE/$package-$version-cvs.tar"* \
+		"../$ARCHIVE/$package-$version-src.diff"* \
+
+fi
+if test -d "../$TEMP/$package-$version-src" \
+|| test -d "../$TEMP/$package-$version-cvs" \
+|| test -f "../$ARCHIVE/$package-$version-src.tar"* \
+|| test -f "../$ARCHIVE/$package-$version-cvs.tar"* \
+|| test -f "../$ARCHIVE/$package-$version-src.diff"*
+then
+	echo "There is a file or directory in the way"
+	exit 35
+fi
+
+if test -n "$(( cvs up 2>&1 || echo "Houston, we have a problem" ) | grep -v "^cvs update: Updating ")"
+then
+	echo "There is a problem concerning CVS. Please make sure to have all files up to "
+	echo "date (i.e. commit your changes) and have all files either cvs add'ed or "
+	echo ".cvsignore'd."
+	if $TESTING
+	then
+		echo "IGNORING PROBLEM, AS WE ARE ONLY TESTING ANYWAYS"
+	else
+		exit 36
+	fi
+fi
+
+if ! $TESTING
+then
+	echo "Calling 'cvs rtag -d $package-$major-$minor-$patch $package' ..."
+	cvs rtag -d $package-$major-$minor-$patch $package || $TESTING || exit 37
+fi
+
+(
+	cd ..
+	
+	mkdir -p "$ARCHIVE" "$TEMP" || exit 49
+	
+	cp -a "$package" "$TEMP/$package-$version-src" || exit 48
+	cp -a "$package" "$TEMP/$package-$version-cvs" || exit 47
+	find "$TEMP/$package-$version-src" -depth -type d -name CVS -exec rm -fr {} \;
+	fcd -i "$TEMP/$package-$version-cvs" "$TEMP/$package-$version-src"
+	find "$TEMP/$package-$version-src" -name '.#*' -exec rm {} \;
+	
+	echo "$major" > "$TEMP/$package-$version-src/.major" || exit 46
+	echo "$minor" > "$TEMP/$package-$version-src/.minor" || exit 45
+	echo "$patch" > "$TEMP/$package-$version-src/.patch" || exit 44
+	
+	for part in src cvs
+	do
+		if test "$part" != cvs
+		then
+			if test -d "$TEMP/$package-$prev_version-$part"
+			then
+				(
+					cd "$TEMP"
+					diff -urN "$package-$prev_version-$part" "$package-$version-$part" > "$package-$prev_version-$version-$part.diff"
+				) || exit 42
+				mv "$package-$prev_version-$version-$part.diff" "$ARCHIVE" || exit 43
+				
+				bestzip "$ARCHIVE/$package-$prev_version-$version-$part.diff" && rm "$ARCHIVE/$package-$prev_version-$version-$part.diff"
+			fi
+		fi
+		
+		(
+			cd "$TEMP"
+			tar c "$package-$version-$part"
+		) > "$ARCHIVE/$package-$version-$part.tar" || exit 41
+		
+		bestzip "$ARCHIVE/$package-$version-$part.tar" && rm "$ARCHIVE/$package-$version-$part.tar"
+	done
+)
+
+if ! $TESTING
+then
+	sync; sync; sync ##################### DISK WRITE BARRIER #####################
+	
+	echo "$patch" > ".patch.new"
+	echo "$minor" > ".minor.new"
+	echo "$major" > ".major.new"
+	
+	sync; sync; sync ##################### DISK WRITE BARRIER #####################
+	
+	rm ".major" ".minor" ".patch"
+	
+	sync; sync; sync ##################### DISK WRITE BARRIER #####################
+	
+	mv .patch.new .patch
+	mv .minor.new .minor
+	mv .major.new .major
+	
+	sync; sync; sync ##################### DISK WRITE BARRIER #####################
+	
+	cvs commit -m "AUTOMATIC COMMIT [MakeVersionControl]: Update version for make $action from $prev_version to $version" .patch .minor .major
+	
+	echo "Calling 'cvs tag $package-$major-$minor-$patch .' ..."
+	cvs tag $package-$major-$minor-$patch . || exit 38
+fi
+
+exit 0

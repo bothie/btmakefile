@@ -1,0 +1,42 @@
+TARGETCPP           = $(BEOSTOOLSPREFIX)cpp
+TARGETCXX           = $(BEOSTOOLSPREFIX)c++ -c
+TARGETCC            = $(BEOSTOOLSPREFIX)cc  -c
+TARGETSO            = $(BEOSTOOLSPREFIX)c++ -shared
+TARGETPI            = $(BEOSTOOLSPREFIX)c++ -shared
+TARGETDE            = $(BEOSTOOLSPREFIX)c++
+TARGETSE            = $(BEOSTOOLSPREFIX)c++ -static
+TARGETAR            = $(BEOSTOOLSPREFIX)ar
+
+TARGETCPPFLAGS      = -D$(TARGET)
+TARGETCXXFLAGS      = -fPIC
+TARGETCCFLAGS       = -fPIC
+TARGETSOFLAGS       = -fPIC
+TARGETPIFLAGS       = -fPIC
+TARGETDEFLAGS       = -fPIC
+TARGETSEFLAGS       = -fPIC
+TARGETARFLAGS       = 
+
+ifdef NEED_NETWORK
+TARGETLDFLAGS += -lsocket -lbind
+endif
+
+ifdef NEED_RUNTIME_LINKER
+TARGETLDFLAGS += -ldl
+endif
+
+ARPREFIX            = lib
+ARSUFFIX            = .a
+DEPPREFIX           = 
+DEPSUFFIX           = .d
+DEPREFIX            = 
+DEOPTFIX            = -dynamic
+DESUFFIX            = 
+SEPREFIX            = 
+SEOPTFIX            = -static
+SESUFFIX            = 
+OBJPREFIX           = 
+OBJSUFFIX           = .o
+PIPREFIX            = lib
+PISUFFIX            = .so
+SOPREFIX            = lib
+SOSUFFIX            = .so
