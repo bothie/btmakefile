@@ -9,3 +9,4 @@ version.c
 version.c.d
 version.h
 version.o
+btmakefile
