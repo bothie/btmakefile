@@ -1,0 +1,11 @@
+.ignore
+Makefile.Include
+Makefile.System
+Makefile.stderr
+btmakefile.Makefile
+configure-prev
+libbtmakefile.a
+version.c
+version.c.d
+version.h
+version.o
