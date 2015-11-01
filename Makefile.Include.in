@@ -33,10 +33,10 @@
 #           
 #           Each of this files, a dependency file will be created for (supposed 
 #           the btmakefile does know how to do this - the mentioned source 
-#           types it is guaranteed to be known). Each source file which is used 
+#           types are guaranteed to be known). Each source file which is used 
 #           SHOULD, but don't NEED to be listed here (in the latter case, the 
 #           caller has to take care about compilation, creating dependancy 
-#           information and the like).
+#           information and the like on his own).
 #           
 #    Intermediate symbols:
 #       
@@ -76,6 +76,9 @@
 #          This is a dummy target which will NEVER be made. But if you set 
 #          LIBTARGET to x then an appropriate ARTARGET (libx.a or the like) and 
 #          SOTARGET (libx.so or the like) will be made.
+#
+#          Additionally, this automatically sets the -soname= argument to the 
+#          target name of the shared object.
 #          
 #       * LIBOBJS (used only for LIBTARGET)
 #          
@@ -92,7 +95,7 @@
 #       * SETARGET (static executable)
 #       * DETARGET (dynamic executable)
 
-# EXETARGETS -> LDTARGETS oder LSTARGETS, was immer der Benutzer gerne hätte
+# EXETARGETS -> LDTARGETS or LSTARGETS, whatever the user loves
 
 #          
 #          This two targets create actual programs.
@@ -426,13 +429,11 @@ BINS += $(BINS-HAVE_GNET)
 		BINS += $(BINS-HAVE_LIBCAP)
 	endif
 
-DEPS   += $(addprefix $(BUILDDIR)/,$(addsuffix $(DEPSUFFIX),$(SRCS)))
+DEPS   += $(addsuffix $(DEPSUFFIX),$(SRCS))
 INCS   += $(patsubst %.cc,%.ii,$(patsubst %.cpp,%.ii,$(patsubst %.c,%.i,$(filter %.c %.cc %.cpp,$(SRCS)))))
-# INCS += $(filter %.i %.ii,$(patsubst %.cc,%.ii,$(patsubst %.cpp,%.ii,$(patsubst %.c,%.i,$(SRCS)))))
 ASMS   += $(patsubst %.ii,%.s,$(patsubst %.i,%.s,$(INCS) $(filter %.i %.ii,$(SRCS))))
-OBJS   += $(addprefix $(BUILDDIR)/$(OBJPREFIX),$(patsubst %.s,%$(OBJSUFFIX),$(ASMS) $(filter %.s,$(SRCS))))
-# OBJS += $(filter %.o %.oo,$(patsubst %.cc,%.oo,$(patsubst %.cpp,%.oo,$(patsubst %.c,%.o,$(SRCS)))))
-LANGS  += $(addprefix $(BUILDDIR)/,$(patsubst %.langsrc,%.lang,$(filter %.langsrc,$(SRCS))))
+OBJS   += $(addprefix $(OBJPREFIX),$(patsubst %.s,%$(OBJSUFFIX),$(ASMS) $(filter %.s,$(SRCS))))
+LANGS  += $(patsubst %.langsrc,%.lang,$(filter %.langsrc,$(SRCS)))
 
 # DEBUG-GNET := $(shell echo "SRCS=$(SRCS)">&2)
 # DEBUG-GNET := $(shell echo "DEPS=$(DEPS)">&2)
@@ -445,14 +446,14 @@ export TARGETLC
 -include $(DEPS) dummy.d
       endif
 
-# GLOBAL???FLAGS - Gilt für alle btmakefile-Projekte.
-# TARGET???FLAGS - Das "CONFIG" muß da eventuell noch raus - das was für dieses Target speziell ist (Makefile.Config.TARGET)
-# CONFIG???FLAGS - Für ein Projekt-Configure Skript ($(TOPDIR)/Makefile.Config)
-#  LOCAL???FLAGS - Aktuelle $(MAKEFILE)
-#       ???FLAGS - Benutzer z.B. beim Make-Aufruf oder via Environment
+# GLOBAL???FLAGS - For every btmakefile-Projekts.
+# TARGET???FLAGS - Whatever is special for this target [Makefile.Config.TARGET] (maybe the "CONFIG" have to get ripped here)
+# CONFIG???FLAGS - For a project wide configure script [$(TOPDIR)/Makefile.Config]
+#  LOCAL???FLAGS - For the current $(MAKEFILE)
+#       ???FLAGS - For the user (his environment) who called make
 
 # -MT $<.d 
-MKDEPFLAGS=-MD -MG -MP -MF $<.d
+MKDEPFLAGS=-MD -MP -MF $<.d
 
 REALCPPFLAGS = $(BTMAKEFILECPPFLAGS) $(GLOBALCPPFLAGS) $(TARGETCPPFLAGS) $(CONFIGCPPFLAGS) $(LOCALCPPFLAGS) $(CPPFLAGS) $(MKDEPFLAGS)
 REALCFLAGS   = $(BTMAKEFILECFLAGS)   $(GLOBALCFLAGS)   $(TARGETCFLAGS)   $(CONFIGCFLAGS)   $(LOCALCFLAGS)   $(CFLAGS)   $(REALCPPFLAGS)
@@ -647,49 +648,49 @@ ifdef TARGET
 
 MAKE := $(MAKE) TARGET=$(TARGET) TARGETLC=$(TARGETLC)
 
-# §-§PATTERNRULE§%§%$(DEPSUFFIX)§Makeing dependency rules for§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $(CFLAGS-$@) $(CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o /dev/null§§
+# !-!PATTERNRULE!%!%$(DEPSUFFIX)!Makeing dependency rules for!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $(CFLAGS-$@) $(CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o /dev/null!!
 
-#§-§PATTERNRULE§%.c  §%.c$(DEPSUFFIX)  §Makeing dependency rules for§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null§§
-#§-§PATTERNRULE§%.cpp§%.cpp$(DEPSUFFIX)§Makeing dependency rules for§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null§§
-#§-§PATTERNRULE§%.cc §%.cc$(DEPSUFFIX) §Makeing dependency rules for§mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null§§
+#!-!PATTERNRULE!%.c  !%.c$(DEPSUFFIX)  !Makeing dependency rules for!mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null!!
+#!-!PATTERNRULE!%.cpp!%.cpp$(DEPSUFFIX)!Makeing dependency rules for!mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null!!
+#!-!PATTERNRULE!%.cc !%.cc$(DEPSUFFIX) !Makeing dependency rules for!mkdir $(BUILDDIR) 2>/dev/null; $(CPP) $< -o /dev/null!!
 
 #
 # Object pattern rules
 #
 
-§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.i  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.ii §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX)                $(CFLAGS-$@) $(CXXFLAGS-$@)                           $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.c  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CPPFLAGS-$@) $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.cpp§%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.cc §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+!!PATTERNRULE!%.s  !%.o!Compiling!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@!!
+!!PATTERNRULE!%.s  !%.o!Compiling!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@!!
+!!PATTERNRULE!%.i  !%.o!Compiling!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@!!
+!!PATTERNRULE!%.ii !%.o!Compiling!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CXX)                $(CFLAGS-$@) $(CXXFLAGS-$@)                           $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@!!
+!!PATTERNRULE!%.c  !%.o!Compiling!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CPPFLAGS-$@) $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@!!
+!!PATTERNRULE!%.cpp!%.o!Compiling!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@!!
+!!PATTERNRULE!%.cc !%.o!Compiling!$<!mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@!!
 
 #
 # Assembler pattern rules
 #
 
-§§PATTERNRULE§%.i  §%.s§Generating assembler output from§$<§$(CS)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.ii §%.s§Generating assembler output from§$<§$(CXS)                $(CFLAGS-$@) $(CXXFLAGS-$@)                           $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.c  §%.s§Generating assembler output from§$<§$(CS)  $(CPPFLAGS-$@) $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.cpp§%.s§Generating assembler output from§$<§$(CXS) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.cc §%.s§Generating assembler output from§$<§$(CXS) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+!!PATTERNRULE!%.i  !%.s!Generating assembler output from!$<!$(CS)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@!!
+!!PATTERNRULE!%.ii !%.s!Generating assembler output from!$<!$(CXS)                $(CFLAGS-$@) $(CXXFLAGS-$@)                           $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@!!
+!!PATTERNRULE!%.c  !%.s!Generating assembler output from!$<!$(CS)  $(CPPFLAGS-$@) $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@!!
+!!PATTERNRULE!%.cpp!%.s!Generating assembler output from!$<!$(CXS) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@!!
+!!PATTERNRULE!%.cc !%.s!Generating assembler output from!$<!$(CXS) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@!!
 
 #
 # Generare Preprocessed files:
 #
 
 # $(CC) $(CFLAGS) -E -P $< -o $@
-§§PATTERNRULE§%.c  §%.i §Preprocessing§$<§$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~§§
-§§PATTERNRULE§%.cpp§%.ii§Preprocessing§$<§$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~§§
-§§PATTERNRULE§%.cc §%.ii§Preprocessing§$<§$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~§§
+!!PATTERNRULE!%.c  !%.i !Preprocessing!$<!$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~!!
+!!PATTERNRULE!%.cpp!%.ii!Preprocessing!$<!$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~!!
+!!PATTERNRULE!%.cc !%.ii!Preprocessing!$<!$(CPP) $(CPPFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $< -o $@ && indent -sob -i8 -bli0 -br -kr -l9999 $@ >&2 && rm $@~!!
 
 #
 # For my language concept (currently needed only by the package language, but
 # that may change WITHOUT updating this sentence of this file!!!)
 #
 
-§§PATTERNRULE§%.langsrc§%.lang:§Compiling§$<§$(CPP) -x c -P $< | $(LC) $(LCFLAGS) -o $@§§
+!!PATTERNRULE!%.langsrc!%.lang:!Compiling!$<!$(CPP) -x c -P $< | $(LC) $(LCFLAGS) -o $@!!
 
 # ifdef BIN
 # ifndef BINOBJS
@@ -698,7 +699,7 @@ MAKE := $(MAKE) TARGET=$(TARGET) TARGETLC=$(TARGETLC)
 # $(BIN): $(BINOBJS)
 # endif
 # 
-# §-§PATTERNRULE§ §$(BIN) $(BINS)§Linking§$(CXX) $(GCCLDFLAGS) $(GCCLDFLAGS-$@) $^ -o $@§-§
+# !-!PATTERNRULE! !$(BIN) $(BINS)!Linking!$(CXX) $(GCCLDFLAGS) $(GCCLDFLAGS-$@) $^ -o $@!-!
 
 ifdef DEBUG
 DEBUG := $(shell echo "BIN=$(BIN)" >&2)
@@ -763,10 +764,10 @@ DEBUG := true
 #
 # This is the executable generation rule ONLY FOR ***STATIC*** executables.
 #
-§§PATTERNRULE§ §$(SETARGETS) $(SETARGET)§Linking (creating static executable)§$^§$(TARGETSE) -Wl,-\( $(REALSEFLAGS) $(SEFLAGS-$@) $(LDFLAGS-$@) $(BTMAKEFILE-LDFLAGS-$@) $(BTMAKEFILE-SEFLAGS-$@) $^ -Wl,-\) -o $@§§
+!!PATTERNRULE! !$(SETARGETS) $(SETARGET)!Linking (creating static executable)!$^!$(TARGETSE) -Wl,-\( $(REALSEFLAGS) $(SEFLAGS-$@) $(LDFLAGS-$@) $(BTMAKEFILE-LDFLAGS-$@) $(BTMAKEFILE-SEFLAGS-$@) $^ -Wl,-\) -o $@!!
 
 $(SETARGET): $(SEOBJS)
-$(ALL): $(SETARGETS)
+$(ALL): $(SETARGETS) $(SETARGET)
 endif # ifeq ($(BUILD_STATIC_EXES),true)
 
 ifeq ($(BUILD_DYNAMIC_EXES),true)
@@ -804,10 +805,10 @@ DEBUG := true
 #
 # This is the executable generation rule ONLY FOR ***DYNAMIC*** executables.
 #
-§§PATTERNRULE§ §$(DETARGETS) $(DETARGET)§Linking (creating dynamic executable)§$^§$(TARGETDE) -Wl,-\( $(REALDEFLAGS) $(DEFLAGS-$@) $(LDFLAGS-$@) $(BTMAKEFILE-LDFLAGS-$@) $(BTMAKEFILE-DEFLAGS-$@) $^ -Wl,-\) -o $@§§
+!!PATTERNRULE! !$(DETARGETS) $(DETARGET)!Linking (creating dynamic executable)!$^!$(TARGETDE) -Wl,-\( $(REALDEFLAGS) $(DEFLAGS-$@) $(LDFLAGS-$@) $(BTMAKEFILE-LDFLAGS-$@) $(BTMAKEFILE-DEFLAGS-$@) $^ -Wl,-\) -o $@!!
 
 $(DETARGET): $(DEOBJS)
-$(ALL): $(DETARGETS)
+$(ALL): $(DETARGETS) $(DETARGET)
 endif # ifeq ($(BUILD_DYNAMIC_EXES),true)
 
 ifdef LIBTARGET
@@ -822,6 +823,7 @@ endif
 endif
 ifndef SOTARGET
 SOTARGET = $(SOPREFIX)$(LIBTARGET)$(SOSUFFIX)
+SOFLAGS += -Wl,-soname=$(SOPREFIX)$(LIBTARGET)$(SOSUFFIX)
 ifndef SOOBJS
 SOOBJS = $(LIBOBJS)
 endif
@@ -840,7 +842,7 @@ endif
 
 $(ALL): $(ARTARGETS)
 
-§§PATTERNRULE§ §$(ARTARGETS)§Archivating (creating static library)§$^§$(AR) rs $@ $^§§
+!!PATTERNRULE! !$(ARTARGETS)!Archivating (creating static library)!$^!$(AR) rcs $@ $^!!
 
 ifdef DEBUG
 DEBUG := $(shell echo ARTARGETS=$(ARTARGETS) >&2)
@@ -860,7 +862,7 @@ endif
 
 $(ALL): $(SOTARGETS)
 
-§§PATTERNRULE§ §$(SOTARGETS)§Linking (creating dynamic library)§$^§$(SO) $^ -o $@ -L$(BUILDDIR) $(REALSOFLAGS) $(SOFLAGS-$@) $(BTMAKEFILE-SOFLAGS-$@)§§
+!!PATTERNRULE! !$(SOTARGETS)!Linking (creating dynamic library)!$^!$(SO) $^ -o $@ -L$(BUILDDIR) $(REALSOFLAGS) $(SOFLAGS-$@) $(BTMAKEFILE-SOFLAGS-$@)!!
 ifdef DEBUG
 DEBUG := $(shell echo SOTARGETS=$(SOTARGETS) >&2)
 endif
@@ -876,7 +878,7 @@ $(PITARGET): $(PIOBJS)
 $(ALL): $(PITARGET)
 endif
 
-§§PATTERNRULE§ §$(PITARGETS)§Linking (creating runtime link library aka plugin)§$^§$(PI) $^ -o $@ -L$(BUILDDIR) $(REALPIFLAGS) $(PIFLAGS-$@) $(BTMAKEFILE-PIFLAGS-$@)§§
+!!PATTERNRULE! !$(PITARGETS)!Linking (creating runtime link library aka plugin)!$^!$(PI) $^ -o $@ -L$(BUILDDIR) $(REALPIFLAGS) $(PIFLAGS-$@) $(BTMAKEFILE-PIFLAGS-$@)!!
 
 print-copyright:
 	@$(SHELL) -ec '( cat $(TOPDIR)/COPYRIGHT 2>/dev/null || cat $(BTMAKEPATH)/COPYRIGHT ) | sed '\''s;$$(package);$(package);g'\'' | sed '\''s;$$(copyrightyears);$(copyrightyears);g'\'' | sed '\''s;$$(mainauthor);$(mainauthor);g'\'

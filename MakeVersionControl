@@ -1,12 +1,9 @@
 #!/bin/sh
 
-# Freie Fehlernummern 39, 40
-# Erste freie Fehlernummer: 50
+# Free error numbers -
+# First unused error number: 53
 
 # Configuration:
-#
-# ???
-ignore_binaries=true
 
 if test "$1" == "--test"
 then
@@ -147,13 +144,21 @@ fi
 (
 	cd ..
 	
-	mkdir -p "$ARCHIVE" "$TEMP" || exit 49
+	mkdir -p "$ARCHIVE" || exit 49
 	
-	cp -a "$package" "$TEMP/$package-$version-src" || exit 48
-	cp -a "$package" "$TEMP/$package-$version-cvs" || exit 47
+	mkdir -p "$TEMP/$package-$version-cvs/CVS" || exit 47
+	cp "$package"/CVS/{Repository,Root} "$TEMP/$package-$version-cvs/CVS" || exit 40
+	touch "$TEMP/$package-$version-cvs/CVS/Entries" || exit 52
+	
+	(
+		cd "$TEMP/$package-$version-cvs" || exit 50
+		cvs up 2>/dev/null || exit 51
+	) || exit $?
+	cp -a "$TEMP/$package-$version-cvs" "$TEMP/$package-$version-src" || exit 48
+	
 	find "$TEMP/$package-$version-src" -depth -type d -name CVS -exec rm -fr {} \;
 	fcd -d -i "$TEMP/$package-$version-cvs" "$TEMP/$package-$version-src"
-	find "$TEMP/$package-$version-src" -name '.#*' -exec rm {} \;
+#	find "$TEMP/$package-$version-src" -name '.#*' -exec rm {} \;
 	
 	echo "$major" > "$TEMP/$package-$version-src/.major" || exit 46
 	echo "$minor" > "$TEMP/$package-$version-src/.minor" || exit 45
@@ -166,14 +171,14 @@ fi
 			if test -d "$TEMP/$package-$prev_version-$part"
 			then
 				(
-					cd "$TEMP"
+					cd "$TEMP" || exit 39
 					test -z "$( (
 						diff -urN \
 							"$package-$prev_version-$part" \
 							"$package-$version-$part" > \
 							"$package-$prev_version-$version-$part.diff"
-					) 2>&1)"
-				) || exit 42
+					) 2>&1)" || exit 42
+				) || exit $?
 				mv "$TEMP/$package-$prev_version-$version-$part.diff" "$ARCHIVE" || exit 43
 				
 				bestzip "$ARCHIVE/$package-$prev_version-$version-$part.diff" \

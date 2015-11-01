@@ -43,7 +43,7 @@ endif\
 	@echo "Making btmake-\1-post ..."\
    endif\
 	@$(MAKE) -f $(MAKEFILE) $(NPD) btmake-\1-post || { echo -e -n "$(DEFAULTCOLOR)" \&\& exit 1; }#
-s#§§PATTERNRULE§\([^§]*\)§\([^§]*\)§\([^§]*\)§\([^§]*\)§\([^§]*\)§§#\
+s#!!PATTERNRULE!\([^!]*\)!\([^!]*\)!\([^!]*\)!\([^!]*\)!\([^!]*\)!!#\
 \2: \1\
 ifndef PRINTFLAGS\
    ifndef PRINTSOURCES\
