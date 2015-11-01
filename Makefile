@@ -27,3 +27,6 @@ clean: my-clean
 endif
 
 $(CLEAN): my-clean
+
+Makefile.Include: Makefile.Include.in
+	sed -f Makefile.Include.sed < Makefile.Include.in > Makefile.Include

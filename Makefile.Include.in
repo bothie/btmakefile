@@ -657,23 +657,23 @@ MAKE := $(MAKE) TARGET=$(TARGET) TARGETLC=$(TARGETLC)
 # Object pattern rules
 #
 
-§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.i  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.ii §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.c  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.cpp§%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.cc §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.s  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.i  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.ii §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX)                $(CFLAGS-$@) $(CXXFLAGS-$@)                           $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.c  §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CC)  $(CPPFLAGS-$@) $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.cpp§%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.cc §%.o§Compiling§$<§mkdir $(BUILDDIR) 2>/dev/null; $(CXX) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
 
 #
 # Assembler pattern rules
 #
 
-§§PATTERNRULE§%.i  §%.s§Generating assembler output from§$<§$(CS)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.ii §%.s§Generating assembler output from§$<§$(CXS) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.c  §%.s§Generating assembler output from§$<§$(CS)  $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
-§§PATTERNRULE§%.cpp§%.s§Generating assembler output from§$<§$(CXS) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
-§§PATTERNRULE§%.cc §%.s§Generating assembler output from§$<§$(CXS) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.i  §%.s§Generating assembler output from§$<§$(CS)                 $(CFLAGS-$@) $(CCFLAGS-$@)                            $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.ii §%.s§Generating assembler output from§$<§$(CXS)                $(CFLAGS-$@) $(CXXFLAGS-$@)                           $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.c  §%.s§Generating assembler output from§$<§$(CS)  $(CPPFLAGS-$@) $(CFLAGS-$@) $(CCFLAGS-$@)  $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CCFLAGS-$@)  $< -o $@§§
+§§PATTERNRULE§%.cpp§%.s§Generating assembler output from§$<§$(CXS) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
+§§PATTERNRULE§%.cc §%.s§Generating assembler output from§$<§$(CXS) $(CPPFLAGS-$@) $(CFLAGS-$@) $(CXXFLAGS-$@) $(BTMAKEFILE-CPPFLAGS-$@) $(BTMAKEFILE-CFLAGS-$@) $(BTMAKEFILE-CXXFLAGS-$@) $< -o $@§§
 
 #
 # Generare Preprocessed files:

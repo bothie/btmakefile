@@ -141,7 +141,7 @@ fi
 if ! $TESTING
 then
 	echo "Calling 'cvs rtag -d $package-$major-$minor-$patch $package' ..."
-	cvs rtag -d $package-$major-$minor-$patch $package || $TESTING || exit 37
+	cvs rtag -d $package-$major-$minor-$patch $package || exit 37
 fi
 
 (
@@ -152,7 +152,7 @@ fi
 	cp -a "$package" "$TEMP/$package-$version-src" || exit 48
 	cp -a "$package" "$TEMP/$package-$version-cvs" || exit 47
 	find "$TEMP/$package-$version-src" -depth -type d -name CVS -exec rm -fr {} \;
-	fcd -i "$TEMP/$package-$version-cvs" "$TEMP/$package-$version-src"
+	fcd -d -i "$TEMP/$package-$version-cvs" "$TEMP/$package-$version-src"
 	find "$TEMP/$package-$version-src" -name '.#*' -exec rm {} \;
 	
 	echo "$major" > "$TEMP/$package-$version-src/.major" || exit 46
@@ -167,13 +167,19 @@ fi
 			then
 				(
 					cd "$TEMP"
-					diff -urN "$package-$prev_version-$part" "$package-$version-$part" > "$package-$prev_version-$version-$part.diff"
+					test -z "$( (
+						diff -urN \
+							"$package-$prev_version-$part" \
+							"$package-$version-$part" > \
+							"$package-$prev_version-$version-$part.diff"
+					) 2>&1)"
 				) || exit 42
-				mv "$package-$prev_version-$version-$part.diff" "$ARCHIVE" || exit 43
+				mv "$TEMP/$package-$prev_version-$version-$part.diff" "$ARCHIVE" || exit 43
 				
-				bestzip "$ARCHIVE/$package-$prev_version-$version-$part.diff" && rm "$ARCHIVE/$package-$prev_version-$version-$part.diff"
-			fi
-		fi
+				bestzip "$ARCHIVE/$package-$prev_version-$version-$part.diff" \
+				&& rm "$ARCHIVE/$package-$prev_version-$version-$part.diff"
+			fi || exit $?
+		fi || exit $?
 		
 		(
 			cd "$TEMP"
@@ -181,8 +187,8 @@ fi
 		) > "$ARCHIVE/$package-$version-$part.tar" || exit 41
 		
 		bestzip "$ARCHIVE/$package-$version-$part.tar" && rm "$ARCHIVE/$package-$version-$part.tar"
-	done
-)
+	done || exit $?
+) || exit $?
 
 if ! $TESTING
 then
