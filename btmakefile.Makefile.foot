@@ -1,0 +1,13 @@
+
+# LIBTARGET = btmakefile
+
+# SOTARGET = libbtmakefile.so
+# SOFLAGS += -lm -ldl
+ARTARGET = libbtmakefile.a
+
+include Makefile.Include
+
+real-all:
+
+real-clean:
+	@rm -f $(SHROBJ) $(ARCOBJ) $(INCOBJ)

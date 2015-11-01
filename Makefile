@@ -20,7 +20,7 @@ print-install-note:
 
 my-clean:
 	rm -f configure.* *.d *.o test4sint_overflow.{c,elf} Makefile.{stderr,Include,System} configure-prev version.*
-	rm -fr workarounds wrappers
+	rm -fr wrappers
 
 ifndef CLEAN
 clean: my-clean

@@ -183,9 +183,6 @@ EOF
 	test -d wrappers && rm -fr wrappers
 	mkdir wrappers
 	
-	test -d workarounds && rm -fr workarounds
-	mkdir workarounds
-	
 	# Makeline Merge sed script
 	cat >configure.sed <<EOF
 :goon
@@ -426,7 +423,7 @@ EOF
 	then
 		(
 			echo
-			echo "CFLAGS+=-DTIOCGWINSZ"
+			echo "CPPFLAGS+=-DTIOCGWINSZ"
 		) >> Makefile.System
 		echo "yes"
 	else
@@ -457,7 +454,8 @@ test4gnet () {
 			echo
 			echo "HAVE_GNET=$HAVE_GNET"
 			echo "HAVE_GNET_VERSION=$HAVE_GNET_VERSION"
-			echo "BTMAKEFILE-GNET-CFLAGS=$(pkg-config gnet-2.0 --cflags) -DHAVE_GNET -DHAVE_GNET_VERSION=\"HAVE_GNET_VERSION\""
+			echo "BTMAKEFILE-GNET-CFLAGS=$(pkg-config gnet-2.0 --cflags)"
+			echo "BTMAKEFILE-GNET-CPPFLAGS=-DHAVE_GNET -DHAVE_GNET_VERSION=\"HAVE_GNET_VERSION\""
 			echo "BTMAKEFILE-GNET-LDFLAGS=$(pkg-config gnet-2.0 --libs)"
 		) >> Makefile.System
 	else
@@ -470,7 +468,8 @@ test4gnet () {
 				echo
 				echo "HAVE_GNET=$HAVE_GNET"
 				echo "HAVE_GNET_VERSION=$HAVE_GNET_VERSION"
-				echo "BTMAKEFILE-GNET-CFLAGS=$(gnet-config --cflags) -DHAVE_GNET -DHAVE_GNET_VERSION=\"HAVE_GNET_VERSION\""
+				echo "BTMAKEFILE-GNET-CFLAGS=$(gnet-config --cflags)"
+				echo "BTMAKEFILE-GNET-CPPFLAGS=-DHAVE_GNET -DHAVE_GNET_VERSION=\"HAVE_GNET_VERSION\""
 				echo "BTMAKEFILE-GNET-LDFLAGS=$(gnet-config --libs)"
 			) >> Makefile.System
 		else
@@ -499,7 +498,7 @@ EOF
 			echo
 			echo "HAVE_LIBCAP=true"
 			echo ""
-			echo "BTMAKEFILE-LIBCAP-CFLAGS=-DHAVE_LIBCAP"
+			echo "BTMAKEFILE-LIBCAP-CPPFLAGS=-DHAVE_LIBCAP"
 			echo "BTMAKEFILE-LIBCAP-LDFLAGS=-lcap"
 		) >> Makefile.System
 		echo "yes"
@@ -517,133 +516,149 @@ test4pkgconfig () {
 	fi
 }
 
-test4big_files_bug () {
-	echo -n "Checking wether big files need special functions ... "
+test4broken_64_bit_api () {
+	echo -n "Checking wether files API is 64 bit safe ..."
+	
 	cat >configure.c <<EOF
-#include <unistd.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-int main(void) {
-	int fd=open("configure.tmp",O_RDWR);
-	if (!fd) return 1;
-	if (2147483647!=lseek(fd,2147483647,SEEK_SET)) return 2;
-	if (2!=write(fd,"12",2)) return 3;
-	unlink("configure.tmp");
+int fd;
+
+void x(int pass) {
+	off_t l=lseek(fd,0x70000000,SEEK_CUR);
+	if (l/0x70000000!=pass) {
+		exit(1);
+	}
+}
+
+int main(int argc,char * argv[]) {
+	fd=open("configure.tmp",O_CREAT|O_TRUNC,0666);
+	if (fd<0) {
+		printf("open: %s",strerror(errno));
+		return 2;
+	}
+	
+	x(1);
+	x(2);
+	x(3);
+	
+	if (fd+argc<fd) {
+		puts(argv[0]);
+	}
+	
 	return 0;
 }
 EOF
-	if $CC -W -Wall configure.c -o configure.elf && ./configure.elf
+	first=true
+	ARG=""
+	while cmd="gcc $ARG -o configure.elf configure.c" \
+	&& $cmd 2>configure.gcc-error
+	do
+		cat configure.gcc-error
+		./configure.elf
+		case "$?" in
+			0)
+				if $first
+				then
+					echo "yes"
+				else
+					echo "yes, but only with $ARG (foring it on)"
+					echo "BTMAKEFILECPPFLAGS += $ARG" >>Makefile.System
+				fi
+				return 0
+				;;
+			1)
+				ARG="-D_LARGE_FILES -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64"
+				;;
+			*)
+				echo "couldn't determine"
+				return 1
+				;;
+		esac
+		if $first
+		then
+			first=false
+		else
+			break
+		fi
+	done
+	if ! test -f configure.elf
 	then
-		echo "no"
+		echo "couldn't determine"
+		cat configure.gcc-error
+	fi
+	echo "code was:"
+	cat configure.c
+	return 1
+}
+
+test4va_copy () {
+	echo -n "Checking whether the macro va_copy is present in stdarg.h ..."
+	
+	cat >configure.c <<EOF
+#include <stdarg.h>
+int main(int argc,char * argv[]) {
+	va_list a,b;
+	va_copy(a,b);
+}
+EOF
+	first=true
+	ARG=""
+	while cmd="gcc $ARG -o configure.elf configure.c"
+	do
+		$cmd 2>configure.gcc-error && {
+			if $first
+			then
+				echo "yes"
+				echo "BTMAKEFILECFLAGS += -DHAVE_VA_COPY" >>Makefile.System
+			else
+				echo "yes, but only with $ARG (foring it on)"
+				echo "BTMAKEFILECFLAGS += -DHAVE_VA_COPY $ARG" >>Makefile.System
+			fi
+			return
+		}
+		if $first
+		then
+			ARG="-Dva_copy=__va_copy"
+			first=false
+		else
+			break
+		fi
+	done
+	echo "no"
+}
+
+test4ccflag_and_cxxflag () {
+	CFLAG="$1"
+	VNAME="$2"
+	
+	echo -n "Checking whether the flag $CFLAG is supported ... "
+	
+	cat >configure.c <<EOF
+int main(int argc,char * argv[]) {
+	return 0;
+}
+EOF
+	first=true
+	if cmd="gcc -c $CFLAG -o configure.elf configure.c"
+	then
+		echo "yes"
+		echo "$VNAME = $CFLAG" >>Makefile.System
 	else
-		echo "yes, generating wrappers for unistd.h, sys/types.h"
-		cat >configure.c <<EOF
-#include <sys/types.h>
-int main(void) {}
-EOF
-		SYS_TYPES_H=`( $CC -W -Wall configure.c -E -M -MP -o configure.o; cat configure.o; ) | tee configure.sys_types.h.MP | sed -f configure.sed | tee configure.sys_types.h.MP2 | awk '{ print $3 }'`
-		cat >configure.c <<EOF
-#include <unistd.h>
-int main(void) {}
-EOF
-		UNISTD_H=`( $CC -W -Wall configure.c -E -M -MP -o configure.o; cat configure.o; ) | tee configure.sys_types.h.MP | sed -f configure.sed | tee configure.sys_types.h.MP2 | awk '{ print $3 }'`
-		cat >configure.c <<EOF
-#include <fcntl.h>
-int main(void) {}
-EOF
-		FCNTL_H=`( $CC -W -Wall configure.c -E -M -MP -o configure.o; cat configure.o; ) | tee configure.sys_types.h.MP | sed -f configure.sed | tee configure.sys_types.h.MP2 | awk '{ print $3 }'`
-		mkdir wrappers/sys 2>/dev/null
-		cat >wrappers/sys/types.h <<EOF
-#ifndef BT_SYS_TYPES_H
-#define BT_SYS_TYPES_H
-
-/*
-$AUTOGENWARNING
-*/
-
-#include "$SYS_TYPES_H"
-
-#define sys_types_off_t off_t
-#define off_t bt_off_t
-
-typedef long long off_t;
-
-#endif // #ifndef BT_SYS_TYPES_H
-EOF
-		cat >wrappers/unistd.h <<EOF
-#ifndef BT_UNISTD_H
-#define BT_UNISTD_H
-
-/*
-$AUTOGENWARNING
-*/
-
-#include <sys/types.h>
-
-#include "$UNISTD_H"
-
-#ifndef COMPILING_WORKAROUNDS
-#	define lseek bt_lseek
-#endif // #ifndef COMPILING_WORKAROUNDS
-
-#ifdef __cplusplus
-extern "C" {
-#endif // #ifdef __cplusplus
-
-bt_off_t bt_lseek(int fd,bt_off_t offset,int whence);
-
-#ifdef __cplusplus
-} // extern "C" 
-#endif // #ifdef __cplusplus
-
-#endif // #ifndef BT_UNISTD_H
-EOF
-		 cat >wrappers/fcntl.h <<EOF
-#ifndef BT_FCNTL_H
-#define BT_FCNTL_H
-
-/*
-$AUTOGENWARNING
-*/
-
-#include "$FCNTL_H"
-
-#ifndef COMPILING_WORKAROUNDS
-#	define open bt_open
-#endif // #ifndef COMPILING_WORKAROUNDS
-
-#ifdef __cplusplus
-extern "C" {
-#endif // #ifdef __cplusplus
-
-int bt_real_open(const char * pathname,int flags,mode_t mode);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif // #ifdef __cplusplus
-
-#ifdef __cplusplus
-
-static inline int bt_open(const char * pathname,int flags,mode_t mode) { return bt_real_open(pathname,flags,mode); }
-static inline int bt_open(const char * pathname,int flags) { return bt_real_open(pathname,flags,0); }
-
-#else // #ifdef __cplusplus
-
-int bt_open(const char * pathname,int flags,...);
-
-#endif // #ifdef __cplusplus, else
-
-#endif // #ifndef BT_FCNTL_H
-EOF
-		./install --mk-makefile-include
-		make BTMAKEPATH=. -f workaround_big_files_bug.Makefile clean
-		make BTMAKEPATH=. -f workaround_big_files_bug.Makefile all
-		echo "BTMAKEFILELDFLAGS += -lworkaround_big_files_bug" >>Makefile.System
-		mv libworkaround_big_files_bug.* workarounds -i
-		version=`cat .major`.`cat .minor`.`cat .patch`
-		ln -s libworkaround_big_files_bug.$version.so workarounds/libworkaround_big_files_bug.so
+		echo "no"
+		echo "$VNAME = " >>Makefile.System
 	fi
 }
+	
+
+cat btmakefile.Makefile.head > btmakefile.Makefile
 
 #
 # And here is everything called
@@ -667,7 +682,21 @@ test4TIOCGWINSZ        || exit 1
 test4pkgconfig
 test4gnet
 test4libcap
-test4big_files_bug
+test4broken_64_bit_api || exit 1
+test4va_copy           || exit 1
+test4ccflag_and_cxxflag "-fno-inline-small-functions" "FNO_LNLINE_SMALL_FUNCTIONS"
+
+# TODO: Actually figure out, what CPU_CLASS is present
+echo "CPU_CLASS = x86" >>Makefile.System
+# TODO: Actually figure out, whether i486 instructions are available
+echo "BTMAKEFILECFLAGS += -DCPU_I486" >>Makefile.System
+
+cat btmakefile.Makefile.foot >> btmakefile.Makefile
+
+make BTMAKEPATH=. --always-make -f Makefile Makefile.Include
+
+make BTMAKEPATH=. --always-make -f btmakefile.Makefile clean
+make BTMAKEPATH=. --always-make -f btmakefile.Makefile all
 
 # Wenn tiefe Suche nach brauchbaren gcc-Targets, JETZT auf find warten, und 
 # danach prüfen, ob die Zusatztools alle unter den entsprechenden Präfig 

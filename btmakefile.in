@@ -7,8 +7,8 @@ Syntax: btmakefile <arg>
 Possible args are:
 
 	--help			Prints this help ;-)
-	--path			Returns the path of this executable
-	--btmakefile-path	Returns the path of the btmakefile-files
+	--path			Returns the path of the btmakefile-files
+	--btmakefile-path	Returns the path of this executable
 	--version		Returns the version of the package btmakefile
 EOF
 }

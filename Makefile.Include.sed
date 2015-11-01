@@ -57,6 +57,7 @@ endif\
 	@if ! ( \5 ) 2>$(STDERROR); then \\\
 		echo -e "$(FAILEDCOLOR)failed:"; \\\
 		cat $(STDERROR); \\\
+		echo "--» Error occured while processing makefile $(THISDIR)/$(MAKEFILE)"; \\\
 		echo -e -n "$(DEFAULTCOLOR)"; \\\
 		false; \\\
 	else \\\

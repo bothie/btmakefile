@@ -19,26 +19,13 @@
 ###############################################################################
 
 package        = btmakefile
-copyrightyears = 2001-2007
+copyrightyears = 2001-2009
 mainauthor     = Bodo Thiesen <bothie@gmx.de>
 
-MAKEFILE = workaround_big_files_bug.Makefile
+MAKEFILE = btmakefile.Makefile
 TOPDIR   = .
 THISDIR  = .
 
 # ENABLE_POINTER=true
 
-SRCS = workaround_big_files_bug.c
-
-LIBTARGET = workaround_big_files_bug
-
-SOTARGET = libworkaround_big_files_bug.$(version).so
-# SOFLAGS += -lm -ldl
-ARTARGET = libworkaround_big_files_bug.a
-
-include Makefile.Include
-
-real-all:
-
-real-clean:
-	@rm -f $(SHROBJ) $(ARCOBJ) $(INCOBJ)
+SRCS = \
