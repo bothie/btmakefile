@@ -730,6 +730,7 @@ test4ccflag_and_cxxflag "-fno-inline-small-functions" "FNO_LNLINE_SMALL_FUNCTION
 
 # TODO: Actually figure out, what CPU_CLASS is present
 echo "CPU_CLASS = x86" >>Makefile.System
+echo "CPU_ARCH = amd64" >>Makefile.System
 # TODO: Actually figure out, whether i486 instructions are available
 echo "BTMAKEFILECPPFLAGS += -DCPU_I486" >>Makefile.System
 
