@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Free error numbers -
-# First unused error number: 54
+# First unused error number: 62
 
 # Configuration:
 
@@ -206,19 +206,19 @@ if ! $TESTING
 then
 	sync; sync; sync ##################### DISK WRITE BARRIER #####################
 	
-	echo "$patch" > ".patch.new"
-	echo "$minor" > ".minor.new"
-	echo "$major" > ".major.new"
+	echo "$patch" > ".patch.new" || exit 54
+	echo "$minor" > ".minor.new" || exit 55
+	echo "$major" > ".major.new" || exit 56
 	
 	sync; sync; sync ##################### DISK WRITE BARRIER #####################
 	
-	rm ".major" ".minor" ".patch"
+	rm ".major" ".minor" ".patch" || exit 57
 	
 	sync; sync; sync ##################### DISK WRITE BARRIER #####################
 	
-	mv .patch.new .patch
-	mv .minor.new .minor
-	mv .major.new .major
+	mv .patch.new .patch || exit 58
+	mv .minor.new .minor || exit 59
+	mv .major.new .major || exit 60
 	
 	sync; sync; sync ##################### DISK WRITE BARRIER #####################
 	
