@@ -208,13 +208,13 @@ endif
 ifeq (\$(COMPILER),CLANG)
 CONFIGURE_CPP = clang -E
 CONFIGURE_CS  = clang -S
-CONFIGURE_CXS = clang -S
+CONFIGURE_CXS = clang++ -S
 CONFIGURE_CC  = clang -c
-CONFIGURE_CXX = clang -c
-CONFIGURE_SO  = clang -shared
-CONFIGURE_PI  = clang -shared
-CONFIGURE_DE  = clang
-CONFIGURE_SE  = clang -static
+CONFIGURE_CXX = clang++ -c
+CONFIGURE_SO  = clang++ -shared
+CONFIGURE_PI  = clang++ -shared
+CONFIGURE_DE  = clang++
+CONFIGURE_SE  = clang++ -static
 CONFIGURE_AR  = ar
 endif
 
