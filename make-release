@@ -5,10 +5,156 @@
 
 # Configuration:
 
-if ! test -d CVS
+NUM_DETECTED=0
+
+#############
+#           #
+# BEGIN CVS #
+#           #
+#############
+
+# Current woring directory: base/project_working_dir
+#
+# Goal of this function: Check, that the working directory is clean, meaning:
+# There are no files, that needs committing. So, all files should be committed
+# to the repository OR being added to the VCSses way to being ignored, here
+# .gitignore
+#
+# Resturn: Empty stdout, if everything is fine, exit code won't be checked.
+cvs_check_work_dir_clean () {
+	(
+		cvs up 2>&1 || echo "Houston, we have a problem"
+	) | grep -v "^cvs update: Updating "
+}
+
+# Current woring directory: base/project_working_dir
+#
+# Tag current version. In case of CVS, we tagged remotely, because we would
+# cvs up into a carefully prepared mostly empty working directory and would
+# get exactly the tagged files this way, preventing inconsistencies in case
+# of a race between us cvs up'dating and someone else cvs commit'ting. In
+# case of git, since we're using out local clone of the repository anyways,
+# this step isn't needed at all. We'll tag later.
+cvs_rtag () {
+	tag_name="$1"
+	
+	cvs rtag -d "$tag_name" "$package"
+}
+
+# Current woring directory: base
+cvs_clone () {
+	mkdir -p "$TEMP/$package-$version-$VCS_NAME_LC/CVS" || exit 47
+	cp "$package"/CVS/{Repository,Root} "$TEMP/$package-$version-$VCS_NAME_LC/CVS" || exit 40
+	touch "$TEMP/$package-$version-$VCS_NAME_LC/CVS/Entries" || exit 52
+	
+	(
+		cd "$TEMP/$package-$version-$VCS_NAME_LC" || exit 50
+		cvs up 2>/dev/null || exit 51
+	) || exit $?
+	cp -a "$TEMP/$package-$version-$VCS_NAME_LC" "$TEMP/$package-$version-src" || exit 48
+	
+	find "$TEMP/$package-$version-src" -depth -type d -name CVS -exec rm -fr {} \;
+	fcd -d -i "$TEMP/$package-$version-$VCS_NAME_LC" "$TEMP/$package-$version-src"
+#	find "$TEMP/$package-$version-src" -name '.#*' -exec rm {} \;
+}
+	
+# Current woring directory: base/project_working_dir
+cvs_commit () {
+	msg="$1"
+	shift
+	
+	cvs commit -m "$msg" "$@"
+}
+
+# Current woring directory: base/project_working_dir
+cvs_tag () {
+	tag_name="$1"
+	
+	cvs tag "$tag_name" .
+}
+
+###########
+#         #
+# END CVS #
+#         #
+###########
+
+#############
+#           #
+# BEGIN GIT #
+#           #
+#############
+
+# Current woring directory: base/project_working_dir
+#
+# Goal of this function: Check, that the working directory is clean, meaning:
+# There are no files, that needs committing. So, all files should be committed
+# to the repository OR being added to the VCSses way to being ignored, here
+# .gitignore
+#
+# Resturn: Empty stdout, if everything is fine, exit code won't be checked.
+git_check_work_dir_clean () {
+	git status --porcelain=1
+}
+
+# Current woring directory: base/project_working_dir
+#
+# Tag current version. In case of CVS, we tagged remotely, because we would
+# cvs up into a carefully prepared mostly empty working directory and would
+# get exactly the tagged files this way, preventing inconsistencies in case
+# of a race between us cvs up'dating and someone else cvs commit'ting. In
+# case of git, since we're using out local clone of the repository anyways,
+# this step isn't needed at all. We'll tag later.
+git_rtag () {
+	true
+}
+
+# Current woring directory: base
+git_clone () {
+	git clone --shared "$package" "$TEMP/$package-$version-src" || exit 51
+	
+	mkdir "$TEMP/$package-$version-$VCS_NAME_LC" || exit 47
+	
+	mv "$TEMP/$package-$version-src/.git" "$TEMP/$package-$version-$VCS_NAME_LC" || exit 48
+	
+	rm "$TEMP/$package-$version-$VCS_NAME_LC/.git/objects/info/alternates"
+}
+
+# Current woring directory: base/project_working_dir
+git_commit () {
+	msg="$1"
+	shift
+	
+	git add "$@"
+	git commit -m "$msg"
+}
+
+# Current woring directory: base/project_working_dir
+git_tag () {
+	tag_name="$1"
+	
+	git tag "$tag_name"
+}
+
+###########
+#         #
+# END GIT #
+#         #
+###########
+
+test -d  CVS && { DETECTED_CVS=true; let NUM_DETECTED=NUM_DETECTED+1; VCS_NAME_LC=cvs; } || DETECTED_CVS=false
+test -d .git && { DETECTED_GIT=true; let NUM_DETECTED=NUM_DETECTED+1; VCS_NAME_LC=git; } || DETECTED_GIT=false
+
+if test "$NUM_DETECTED" != 1
 then
-	echo "Currently, this script only supports CVS." >&2
-	echo "Patches to support other VCSses are welcome." >&2
+	echo "Currently, this script supports the following version control systems:" >&2
+	echo >&2
+	echo -n "       " >&2
+	echo -n " CVS" >&2
+	echo -n " git" >&2
+	echo >&2
+	echo >&2
+	echo "Patches to support more VCSses are welcome." >&2
 	exit 53
 fi
 
@@ -129,11 +275,11 @@ then
 	exit 35
 fi
 
-if test -n "$(( cvs up 2>&1 || echo "Houston, we have a problem" ) | grep -v "^cvs update: Updating ")"
+if test -n "$(${VCS_NAME_LC}_check_work_dir_clean)"
 then
-	echo "There is a problem concerning CVS. Please make sure to have all files up to "
-	echo "date (i.e. commit your changes) and have all files either cvs add'ed or "
-	echo ".cvsignore'd."
+	echo "There is a problem concerning $VCS_NAME_LC. Please make sure to have all files up to "
+	echo "date (i.e. commit your changes) and have all files either $VCS_NAME_LC add'ed or "
+	echo ".${VCS_NAME_LC}ignore'd."
 	if $TESTING
 	then
 		echo "IGNORING PROBLEM, AS WE ARE ONLY TESTING ANYWAYS"
@@ -144,8 +290,8 @@ fi
 
 if ! $TESTING
 then
-	echo "Calling 'cvs rtag -d $package-$major-$minor-$patch $package' ..."
-	cvs rtag -d $package-$major-$minor-$patch $package || exit 37
+	echo "Tagging current version $package-$major-$minor-$patch ..."
+	${VCS_NAME_LC}_rtag $package-$major-$minor-$patch || exit 37
 fi
 
 (
@@ -153,27 +299,15 @@ fi
 	
 	mkdir -p "$ARCHIVE" || exit 49
 	
-	mkdir -p "$TEMP/$package-$version-cvs/CVS" || exit 47
-	cp "$package"/CVS/{Repository,Root} "$TEMP/$package-$version-cvs/CVS" || exit 40
-	touch "$TEMP/$package-$version-cvs/CVS/Entries" || exit 52
-	
-	(
-		cd "$TEMP/$package-$version-cvs" || exit 50
-		cvs up 2>/dev/null || exit 51
-	) || exit $?
-	cp -a "$TEMP/$package-$version-cvs" "$TEMP/$package-$version-src" || exit 48
-	
-	find "$TEMP/$package-$version-src" -depth -type d -name CVS -exec rm -fr {} \;
-	fcd -d -i "$TEMP/$package-$version-cvs" "$TEMP/$package-$version-src"
-#	find "$TEMP/$package-$version-src" -name '.#*' -exec rm {} \;
+	${VCS_NAME_LC}_clone || exit $?
 	
 	echo "$major" > "$TEMP/$package-$version-src/.major" || exit 46
 	echo "$minor" > "$TEMP/$package-$version-src/.minor" || exit 45
 	echo "$patch" > "$TEMP/$package-$version-src/.patch" || exit 44
 	
-	for part in src cvs
+	for part in src $VCS_NAME_LC
 	do
-		if test "$part" != cvs
+		if test "$part" == src
 		then
 			if test -d "$TEMP/$package-$prev_version-$part"
 			then
@@ -222,10 +356,10 @@ then
 	
 	sync; sync; sync ##################### DISK WRITE BARRIER #####################
 	
-	cvs commit -m "AUTOMATIC COMMIT [make-release]: Update version for make $action from $prev_version to $version" .patch .minor .major
+	${VCS_NAME_LC}_commit "AUTOMATIC COMMIT [make-release]: Update version for make $action from $prev_version to $version" .patch .minor .major || exit 61
 	
-	echo "Calling 'cvs tag $package-$major-$minor-$patch .' ..."
-	cvs tag $package-$major-$minor-$patch . || exit 38
+	echo "Tagging current version $package-$major-$minor-$patch a second time ..."
+	${VCS_NAME_LC}_tag $package-$major-$minor-$patch || exit 38
 fi
 
 exit 0
