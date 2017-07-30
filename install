@@ -13,13 +13,13 @@ Possible args are:
 	--exepath [1]		This MUST be found in the PATH - if not, you 
 				will end in a broken installation.
 	
-	--extra-prefixl [1][2]	Sets an extra prefix, where the files will be 
+	--extra-prefix [1][2]	Sets an extra prefix, where the files will be 
 				installed to.
 
 [1] The argument to this option SHOULD NOT contain any spaces. If you discard 
     this constraint, you may end up in a broken installation.
 
-[2] --extra-prefixl is only uses while installing. This is a hack for Gentoo, 
+[2] --extra-prefix is only used while installing. This is a hack for Gentoo, 
     so we can install the package in the image directory, while it is in fact 
     configured for another directory. Obviously, the right way had been to 
     replace the install program, but don't tell me, tell the Gentoo 
