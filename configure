@@ -698,7 +698,26 @@ EOF
 		echo "$VNAME = " >>Makefile.System
 	fi
 }
+
+test_4_x11 () {
+	echo -n "Checking for X11 ... "
 	
+	cat >configure.c <<EOF
+#include <X11/Xlib.h>
+int main(int argc,char * argv[]) {
+	XOpenDisplay(NULL);
+	return 0;
+}
+EOF
+	if cmd="gcc -o configure.elf configure.c"
+	then
+		echo "yes"
+		echo "HAVE_X11 = true" >>Makefile.System
+	else
+		echo "no"
+		echo "# HAVE_X11 - X11 was missing during configure run in btmakefile"
+	fi
+}
 
 cat btmakefile.Makefile.head > btmakefile.Makefile
 
@@ -727,6 +746,7 @@ test4libcap
 test4broken_64_bit_api || exit 1
 test4va_copy           || exit 1
 test4ccflag_and_cxxflag "-fno-inline-small-functions" "FNO_LNLINE_SMALL_FUNCTIONS"
+test_4_x11             || exit 1
 
 # TODO: Actually figure out, what CPU_CLASS is present
 echo "CPU_CLASS = x86" >>Makefile.System
