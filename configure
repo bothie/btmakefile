@@ -689,7 +689,7 @@ int main(int argc,char * argv[]) {
 }
 EOF
 	first=true
-	if cmd="gcc -c $CFLAG -o configure.o configure.c"
+	if gcc -c $CFLAG -o configure.o configure.c 2>/dev/null
 	then
 		echo "yes"
 		echo "$VNAME = $CFLAG" >>Makefile.System
@@ -709,13 +709,13 @@ int main(int argc,char * argv[]) {
 	return 0;
 }
 EOF
-	if cmd="gcc -o configure.elf configure.c"
+	if gcc -c -o configure.elf configure.c 2>/dev/null
 	then
 		echo "yes"
 		echo "HAVE_X11 = true" >>Makefile.System
 	else
 		echo "no"
-		echo "# HAVE_X11 - X11 was missing during configure run in btmakefile"
+		echo "# HAVE_X11 - X11 was missing during configure run in btmakefile" >>Makefile.System
 	fi
 }
 
