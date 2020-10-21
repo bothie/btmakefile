@@ -54,18 +54,19 @@ ifndef PRINTFLAGS\
 else\
 	@echo -e -n "$(ACTIONCOLOR)\3 $(INPUTCOLOR)$(addprefix $(THISDIR)/,\4)$(ACTIONCOLOR) to $(OUTPUTCOLOR)$(THISDIR)/$@$(ACTIONCOLOR) with cmdline $(FLAGCOLOR)\5$(ACTIONCOLOR): $(ATTENTIONCOLOR)"\
 endif\
-	@if ! ( \5 ) 2>$(STDERROR); then \\\
+	@if ! ( \5 ) 2>$@.$(STDERROR); then \\\
 		echo -e "$(FAILEDCOLOR)failed:"; \\\
-		cat $(STDERROR); \\\
+		cat $@.$(STDERROR); \\\
 		echo "--» Error occured while processing makefile $(THISDIR)/$(MAKEFILE)"; \\\
 		echo -e -n "$(DEFAULTCOLOR)"; \\\
 		false; \\\
 	else \\\
-		if test -s $(STDERROR); then \\\
+		if test -s $@.$(STDERROR); then \\\
 			echo -e "$(WARNINGCOLOR)ok, but warnings:"; \\\
-			cat $(STDERROR); \\\
+			cat $@.$(STDERROR); \\\
 			echo -e -n "$(DEFAULTCOLOR)"; \\\
 		else \\\
 			echo -e "$(WELLCOLOR)ok.$(DEFAULTCOLOR)"; \\\
 		fi; \\\
-	fi#
+	fi \
+	@rm $@.$(STDERROR)#

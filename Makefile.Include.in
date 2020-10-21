@@ -624,7 +624,7 @@ endif
 #
 
 ifndef STDERROR
-  STDERROR = Makefile.stderr
+	STDERROR = stderr
 endif
 
 ifndef package
@@ -952,7 +952,7 @@ endif
 
 btmake-clean-post: FORCE
 	@$(RM) -f -- version.c $(BIN) $(BINS)
-	@$(RM) -f -- version.h $(CLEANFILES) $(STDERROR) $(ASMS)
+	@$(RM) -f -- version.h $(CLEANFILES) *.$(STDERROR) $(ASMS)
 	@$(RM) -f -- version.o $(OBJS) $(LANGS) .kdbgrc.*
 	@$(RM) -f -- version.c.d config.h $(INCS) $(SOTARGET) $(ARTARGET)
 #	@$(RM) -fr $(TOPDIR)/build-*
