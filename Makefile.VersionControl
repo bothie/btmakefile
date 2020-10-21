@@ -87,33 +87,33 @@ version.o: version.c version.h
 
 version.c: .major .minor .patch
 	@echo "Update version ..."
-	@rm -f .ver
-	@echo "/* Automatic generated file. DON'T CHANGE! */" >> .ver
-	@echo "const int   major_version    =$(version_major);" >> .ver
-	@echo "const int   minor_version    =$(version_minor);" >> .ver
-	@echo "const int   patch_version    =$(version_patch);" >> .ver
-	@echo "const char* version_string   =\"$(version)\";" >> .ver
-	@echo "const char* program_name     =\"$(package)\";" >> .ver
-	@mv .ver version.c
+	@rm -f version.c.n
+	@echo "/* Automatic generated file. DON'T CHANGE! */" >> version.c.n
+	@echo "const int   major_version    =$(version_major);" >> version.c.n
+	@echo "const int   minor_version    =$(version_minor);" >> version.c.n
+	@echo "const int   patch_version    =$(version_patch);" >> version.c.n
+	@echo "const char* version_string   =\"$(version)\";" >> version.c.n
+	@echo "const char* program_name     =\"$(package)\";" >> version.c.n
+	@mv version.c.n version.c
 
 version.h: ;
-	@rm -f .ver
-	@echo "/* Automatic generated file. DON'T CHANGE! */" >> .ver
-	@echo "#ifndef VERSION_H"                             >> .ver
-	@echo "#define VERSION_H"                             >> .ver
-	@echo "#ifdef _cplusplus"                             >> .ver
-	@echo "#define _cdecl \"C\""                          >> .ver
-	@echo "#else"                                         >> .ver
-	@echo "#define _cdecl"                                >> .ver
-	@echo "#endif"                                        >> .ver
-	@echo "extern _cdecl const int   major_version;"      >> .ver
-	@echo "extern _cdecl const int   minor_version;"      >> .ver
-	@echo "extern _cdecl const int   patch_version;"      >> .ver
-	@echo "extern _cdecl const char* version_string;"     >> .ver
-	@echo "extern _cdecl const char* program_name;"       >> .ver
-	@echo "#define PROGRAMNAME \"$(package)\""            >> .ver
-	@echo "#endif /* #ifndef VERSION_H */"                >> .ver
-	@mv .ver version.h
+	@rm -f version.h.n
+	@echo "/* Automatic generated file. DON'T CHANGE! */" >> version.h.n
+	@echo "#ifndef VERSION_H"                             >> version.h.n
+	@echo "#define VERSION_H"                             >> version.h.n
+	@echo "#ifdef _cplusplus"                             >> version.h.n
+	@echo "#define _cdecl \"C\""                          >> version.h.n
+	@echo "#else"                                         >> version.h.n
+	@echo "#define _cdecl"                                >> version.h.n
+	@echo "#endif"                                        >> version.h.n
+	@echo "extern _cdecl const int   major_version;"      >> version.h.n
+	@echo "extern _cdecl const int   minor_version;"      >> version.h.n
+	@echo "extern _cdecl const int   patch_version;"      >> version.h.n
+	@echo "extern _cdecl const char* version_string;"     >> version.h.n
+	@echo "extern _cdecl const char* program_name;"       >> version.h.n
+	@echo "#define PROGRAMNAME \"$(package)\""            >> version.h.n
+	@echo "#endif /* #ifndef VERSION_H */"                >> version.h.n
+	@mv version.h.n version.h
 
 init-version:
 	echo "0" > .major
