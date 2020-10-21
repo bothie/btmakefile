@@ -719,6 +719,28 @@ EOF
 	fi
 }
 
+test_omit_framepointer () {
+	echo -n "Checking for the correct name of -fno-omit-framepointer argument ... "
+	
+	cat >configure.c <<EOF
+int main(int argc,char * argv[]) {
+	return 0;
+}
+EOF
+	for arg in \
+		-fno-omit-framepointer \
+		-fno-omit-frame-pointer \
+		"" \
+	; do
+		if gcc -o configure.elf configure.c $arg 2>/dev/null
+		then
+			echo "NO_OMIT_FRAMEPOINTER = $arg" >>Makefile.System
+			echo "$arg"
+			return 0
+		fi
+	done
+}
+
 cat btmakefile.Makefile.head > btmakefile.Makefile
 
 #
@@ -747,6 +769,7 @@ test4broken_64_bit_api || exit 1
 test4va_copy           || exit 1
 test4ccflag_and_cxxflag "-fno-inline-small-functions" "FNO_LNLINE_SMALL_FUNCTIONS"
 test_4_x11             || exit 1
+test_omit_framepointer || exit 1
 
 # TODO: Actually figure out, what CPU_CLASS is present
 echo "CPU_CLASS = x86" >>Makefile.System
